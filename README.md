@@ -19,6 +19,8 @@ This repo holds **everything technical for AGS**: apps, code, database, docs and
 
 ## Plan
 
+**Go-live plan (live by 31 Dec 2026): [`docs/GO-LIVE-PLAN.md`](docs/GO-LIVE-PLAN.md)**
+
 1. **Now – pilot:** WhatsApp site as the front door + AGS Core on WordPress in Srikakulam.
 2. **Later – the hub:** move to the Next.js + Supabase platform once real prices,
    verified providers, registration and policies are ready.
