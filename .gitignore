@@ -1,0 +1,28 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+test-results/
+playwright-report/
+coverage/
+
+# Secrets – never commit
+.env
+.env.*
+!.env.example
+*.pem
+supabase/.temp/
+
+# Personal data – never commit
+data/private/
+*-filled.xlsx
+*.backup.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
