@@ -26,3 +26,10 @@ data/private/
 Thumbs.db
 .vscode/
 .idea/
+
+# Private folders – kept on computer + Google Drive only, never GitHub
+00_Admin-Legal/*
+!00_Admin-Legal/README.md
+09_Finance/*
+!09_Finance/README.md
+**/private/

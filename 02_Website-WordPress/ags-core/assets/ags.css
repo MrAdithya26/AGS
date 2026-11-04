@@ -1,0 +1,86 @@
+/* AGS Core front-end styles. Works with GeneratePress; change --ags-accent to rebrand. */
+:root {
+	--ags-accent: #0f766e;
+	--ags-accent-ink: #ffffff;
+	--ags-ink: #1f2937;
+	--ags-muted: #6b7280;
+	--ags-line: #e5e7eb;
+	--ags-surface: #ffffff;
+	--ags-soft: #f0fdfa;
+	--ags-radius: 10px;
+}
+
+.ags-form p { margin: 0 0 14px; }
+.ags-form label { display: block; font-weight: 600; margin-bottom: 4px; color: var(--ags-ink); }
+.ags-input, .ags-form select, .ags-form textarea {
+	width: 100%; max-width: 100%; box-sizing: border-box;
+	padding: 10px 12px; border: 1px solid var(--ags-line); border-radius: 8px;
+	font-size: 16px; background: var(--ags-surface);
+}
+.ags-form--inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+.ags-form--inline .ags-input, .ags-form--inline select { width: auto; flex: 1 1 180px; }
+.ags-consent { font-weight: 400 !important; font-size: 14px; }
+.ags-consent input { margin-right: 6px; }
+.ags-fieldset { border: 1px solid var(--ags-line); border-radius: 8px; padding: 10px 12px; margin: 0 0 14px; }
+.ags-check { display: inline-block; font-weight: 400 !important; margin: 0 14px 6px 0; }
+.ags-hp { position: absolute; left: -9999px; height: 0; overflow: hidden; }
+
+.ags-btn {
+	display: inline-block; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--ags-line);
+	background: var(--ags-surface); color: var(--ags-ink); text-decoration: none; font-weight: 600;
+	cursor: pointer; line-height: 1.2;
+}
+.ags-btn:hover { border-color: var(--ags-accent); color: var(--ags-accent); }
+.ags-btn--primary { background: var(--ags-accent); border-color: var(--ags-accent); color: var(--ags-accent-ink); }
+.ags-btn--primary:hover { opacity: .92; color: var(--ags-accent-ink); }
+.ags-inline { display: inline-block; margin: 0 6px 6px 0; }
+
+.ags-card {
+	background: var(--ags-surface); border: 1px solid var(--ags-line); border-radius: var(--ags-radius);
+	padding: 16px; margin-bottom: 16px;
+}
+.ags-card h3, .ags-card h4 { margin: 0 0 8px; }
+.ags-card__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ags-card__img { width: 100%; height: auto; border-radius: 8px; margin-bottom: 10px; }
+.ags-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.ags-grid .ags-card { margin: 0; }
+.ags-muted { color: var(--ags-muted); font-size: 14px; }
+
+.ags-badge {
+	display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+	background: #eef2ff; color: #3730a3; vertical-align: middle;
+}
+.ags-badge--new { background: #fef3c7; color: #92400e; }
+.ags-badge--assigned, .ags-badge--accepted { background: #e0f2fe; color: #075985; }
+.ags-badge--on_the_way, .ags-badge--in_progress { background: #ede9fe; color: #5b21b6; }
+.ags-badge--completed { background: #dcfce7; color: #166534; }
+.ags-badge--cancelled { background: #fee2e2; color: #991b1b; }
+.ags-badge--muted { background: #f3f4f6; color: var(--ags-muted); }
+
+.ags-notice { padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; }
+.ags-notice--success { background: var(--ags-soft); border: 1px solid #99f6e4; }
+.ags-notice--error { background: #fef2f2; border: 1px solid #fecaca; }
+
+.ags-timeline { margin: 8px 0 0 18px; padding: 0; }
+.ags-timeline li { margin-bottom: 4px; }
+.ags-timeline__status { font-weight: 600; }
+
+.ags-details__table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+.ags-details__table th, .ags-details__table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--ags-line); vertical-align: top; }
+.ags-details__table th { width: 35%; color: var(--ags-muted); font-weight: 600; }
+
+.ags-service-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.ags-service-group { border: 1px solid var(--ags-line); border-radius: var(--ags-radius); padding: 14px; }
+.ags-service-group h3 { margin: 0 0 8px; font-size: 17px; color: var(--ags-accent); }
+.ags-service-group ul { margin: 0; padding-left: 18px; }
+.ags-pager { margin-top: 16px; display: flex; gap: 8px; }
+
+.ags-wa-float {
+	position: fixed; right: 16px; bottom: 16px; z-index: 999; background: #25d366; color: #fff;
+	padding: 12px 16px; border-radius: 999px; font-weight: 700; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.ags-wa-float:hover { color: #fff; }
+
+@media (max-width: 600px) {
+	.ags-form--inline .ags-input, .ags-form--inline select { flex-basis: 100%; }
+}
