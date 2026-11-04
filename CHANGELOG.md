@@ -14,7 +14,7 @@ Chat: `11_Chat-Records/2026-11-04_three-place-sync-and-versioning.md`
 - **New:** `11_Chat-Records/` with a summary of every AGS chat so far (4 chats + this one).
 - **Changed:** Go-Live Plan **v1.0 → v1.1** (new file locations only; steps and dates unchanged). v1.0 kept in `99_Archive/01_Plans-Docs/`.
 - **Changed:** `README.md` (3 places, folders, version rules, update routine), `.gitignore` (blocks private folders), `CLAUDE.md` (sync routine).
-- **Removed:** nothing.
+- **Replaced:** 4 placeholder READMEs (`apps/*/README.md` saying "Code for this app will be added here." and the old `docs/README.md` index) by new READMEs in the numbered folders. Old copies stay in GitHub history (commit `fa1fab0`). Nothing else removed.
 
 ## 4 Nov 2026 – Local project folder created
 
