@@ -44,7 +44,7 @@ All three use the **same numbered folders**:
 3. **The newest version sits in its folder. Older versions move to `99_Archive/` with the same folder name.** Nothing is deleted.
 4. **Every change is written in [`CHANGELOG.md`](CHANGELOG.md)**: date, what changed, version, and the chat it came from.
 5. **[`VERSIONS.md`](VERSIONS.md)** shows the current version of every app and document in one table.
-6. **On GitHub, each release gets a tag** (example `ags-core-v1.0.0`), so any old version can be downloaded again.
+6. **GitHub keeps every earlier state** in its history (Commits), and release zips are kept side by side (`releases/ags-core-1.0.0.zip`, `…1.0.1.zip`), so any old version can be downloaded again.
 
 ## How every update is saved (the routine)
 
@@ -54,7 +54,7 @@ Each time Claude changes anything for AGS:
 2. Raise the version if needed, move the old version to `99_Archive/`.
 3. Add a line to `CHANGELOG.md` and update `VERSIONS.md`.
 4. Add or update the chat summary in `11_Chat-Records/`.
-5. Push to GitHub (commit + tag for releases).
+5. Push to GitHub (one commit per change, message says what changed).
 6. Upload the same files to Google Drive `AGS Project (synced)`.
 
 ## Never stored on GitHub

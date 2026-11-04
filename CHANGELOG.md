@@ -14,7 +14,6 @@ Chat: `11_Chat-Records/2026-11-04_three-place-sync-and-versioning.md`
 - **New:** `11_Chat-Records/` with a summary of every AGS chat so far (4 chats + this one).
 - **Changed:** Go-Live Plan **v1.0 → v1.1** (new file locations only; steps and dates unchanged). v1.0 kept in `99_Archive/01_Plans-Docs/`.
 - **Changed:** `README.md` (3 places, folders, version rules, update routine), `.gitignore` (blocks private folders), `CLAUDE.md` (sync routine).
-- **Tags:** `ags-core-v1.0.0`, `whatsapp-site-v1.0.0`, `go-live-plan-v1.1`.
 - **Removed:** nothing.
 
 ## 4 Nov 2026 – Local project folder created

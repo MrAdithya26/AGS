@@ -10,4 +10,4 @@ The main AGS website runs on WordPress with this plugin.
 
 **Install:** WordPress → Plugins → Add New → Upload Plugin → choose `releases/ags-core-1.0.0.zip` → Install → Activate.
 
-**New version:** Claude edits `ags-core/`, raises the version in `ags-core.php` and `readme.txt`, builds `releases/ags-core-<new>.zip` (old zips stay), logs it in `CHANGELOG.md`, tags `ags-core-v<new>`.
+**New version:** Claude edits `ags-core/`, raises the version in `ags-core.php` and `readme.txt`, builds `releases/ags-core-<new>.zip` (old zips stay), logs it in `CHANGELOG.md`.

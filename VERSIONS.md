@@ -4,11 +4,11 @@ Updated: 4 Nov 2026. Older versions are in `99_Archive/` and in GitHub tags.
 
 ## Apps
 
-| App | Folder | Current version | Date | Status | GitHub tag |
-| --- | --- | --- | --- | --- | --- |
-| AGS Core WordPress plugin | `02_Website-WordPress/ags-core/` (zip in `releases/`) | **1.0.0** | 27 Oct 2026 | Ready, not installed yet | `ags-core-v1.0.0` |
-| WhatsApp single-page site | `03_WhatsApp-Site/index.html` | **1.0.0** | 23 Oct 2026 | Ready; placeholder phone/email must be replaced | `whatsapp-site-v1.0.0` |
-| Next.js + Supabase platform | `04_Platform-Nextjs-Supabase/` | **0.x (in development)** | Sep–Oct 2026 | NO-GO (Phase 2). Code still only in Drive | – |
+| App | Folder | Current version | Date | Status |
+| --- | --- | --- | --- | --- |
+| AGS Core WordPress plugin | `02_Website-WordPress/ags-core/` (zip in `releases/`) | **1.0.0** | 27 Oct 2026 | Ready, not installed yet |
+| WhatsApp single-page site | `03_WhatsApp-Site/index.html` | **1.0.0** | 23 Oct 2026 | Ready; placeholder phone/email must be replaced |
+| Next.js + Supabase platform | `04_Platform-Nextjs-Supabase/` | **0.x (in development)** | Sep–Oct 2026 | NO-GO (Phase 2). Code still only in Drive |
 
 ## Documents
 
