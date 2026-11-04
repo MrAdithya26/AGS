@@ -1,6 +1,6 @@
 # AGS – current versions
 
-Updated: 4 Nov 2026. Older versions are in `99_Archive/` and in GitHub tags.
+Updated: 4 Nov 2026. Older versions are in `99_Archive/`, in `releases/` (zips) and in GitHub history.
 
 ## Apps
 
