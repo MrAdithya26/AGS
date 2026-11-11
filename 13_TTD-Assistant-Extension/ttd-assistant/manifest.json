@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "Adithya TTD Booking Assistant",
+  "short_name": "Adithya TTD",
+  "version": "1.5.0",
+  "description": "Fills saved devotee profiles into TTD forms and saves booking results to your Adithya TTD Master Google Sheet.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Adithya TTD Booking Assistant",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "alarms",
+    "notifications",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://ttdevasthanams.ap.gov.in/*",
+    "https://*.ttdevasthanams.ap.gov.in/*",
+    "https://*.tirumala.org/*",
+    "https://tirupatibalaji.ap.gov.in/*",
+    "https://*.tirupatibalaji.ap.gov.in/*",
+    "https://script.google.com/*",
+    "https://script.googleusercontent.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://ttdevasthanams.ap.gov.in/*",
+        "https://*.ttdevasthanams.ap.gov.in/*",
+        "https://*.tirumala.org/*",
+        "https://tirupatibalaji.ap.gov.in/*",
+        "https://*.tirupatibalaji.ap.gov.in/*"
+      ],
+      "js": ["lib/core.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "autofill": {
+      "suggested_key": { "default": "Alt+Shift+F" },
+      "description": "Autofill selected pilgrims on this page"
+    },
+    "paste-mode": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "Show Click & Paste buttons on this page"
+    }
+  }
+}

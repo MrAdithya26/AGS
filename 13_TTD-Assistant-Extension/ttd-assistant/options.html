@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Adithya TTD Settings</title>
+  <link rel="stylesheet" href="ui.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header class="top">
+    <img src="icons/icon128.png" alt="" width="44" height="44">
+    <div class="grow">
+      <h1>Adithya TTD Booking Assistant</h1>
+      <small>Profiles, passengers, photos, monthly release reminders · data stays on this computer</small>
+    </div>
+    <span id="lockPill" class="pill" hidden></span>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button data-tab="profiles" class="on">Profiles</button>
+    <button data-tab="import">Import from Excel</button>
+    <button data-tab="sheet">Google Sheet</button>
+    <button data-tab="schedule">Monthly dates &amp; reminders</button>
+    <button data-tab="photo">Photo &amp; panel</button>
+    <button data-tab="security">Security</button>
+    <button data-tab="backup">Backup</button>
+    <button data-tab="help">How to use</button>
+  </nav>
+
+  <main>
+    <!-- PROFILES -->
+    <section id="tab-profiles" class="tab on">
+      <div class="profLayout">
+        <aside class="profSide">
+          <div class="row between"><h2>Profiles</h2><button id="addProfile" class="btn primary">+ New</button></div>
+          <p class="muted">e.g. "My Family", "Parents", "Office group". Each has its own address and passengers.</p>
+          <div id="profileList" class="profList"></div>
+          <button id="goImport" class="btn">📥 Import from Excel</button>
+        </aside>
+
+        <div id="profDetail" class="profDetail">
+          <div class="card profHead">
+            <label class="grow nameLbl">Profile name<input id="profName" maxlength="40"></label>
+            <div class="row wrap">
+              <button id="useProfile" class="btn">★ Use for next booking</button>
+              <button id="dupProfile" class="btn ghost">Duplicate</button>
+              <button id="delProfile" class="btn danger">Delete</button>
+            </div>
+          </div>
+
+          <form id="contactForm" class="card">
+            <div class="row between"><h3>Address &amp; contact (one per profile)</h3><small id="contactMsg"></small></div>
+            <div class="fields">
+              <label>Mobile number<input name="mobile" inputmode="numeric" maxlength="13" placeholder="10 digits"></label>
+              <label>Email ID<input name="email" type="email"></label>
+              <label class="wide">Address<input name="address" maxlength="150"></label>
+              <label>City / Town<input name="city"></label>
+              <label>District<input name="district"></label>
+              <label>State<select name="state"></select></label>
+              <label>Pincode<input name="pincode" inputmode="numeric" maxlength="6"></label>
+              <label>Country<input name="country"></label>
+            </div>
+            <div id="contactIssues" class="issues"></div>
+            <div class="row"><button class="btn primary" type="submit">Save address</button></div>
+          </form>
+
+          <div class="row between wrap">
+            <h3 id="paxTitle">Passengers</h3>
+            <div class="row wrap">
+              <button id="gotramAll" class="btn ghost" title="Set one Gotram for every passenger in this profile">Set Gotram for all</button>
+              <button id="addPilgrim" class="btn primary">+ Add passenger</button>
+            </div>
+          </div>
+          <div id="pilgrimCards" class="cards"></div>
+
+          <form id="pilgrimForm" class="card editor" hidden>
+            <h3 id="formTitle">Add passenger</h3>
+            <div class="fields">
+              <label>Full name (as on ID)<input name="name" required maxlength="50" autocomplete="off"></label>
+              <label>Date of birth<input name="dob" type="date" required></label>
+              <label>Gender<select name="gender" required></select></label>
+              <label>Photo ID type<select name="idType" required></select></label>
+              <label>Photo ID number<input name="idNumber" autocomplete="off" placeholder="e.g. 12-digit Aadhaar"></label>
+              <label>Gotram <small class="muted">(needed for Homam)</small><input name="gotram" maxlength="40" autocomplete="off" list="gotramList" placeholder="e.g. Bharadwaja"></label>
+            </div>
+            <datalist id="gotramList"></datalist>
+            <div class="photoEdit">
+              <div class="photoBox"><img id="photoPreview" alt="Passenger photo preview" hidden><span id="photoEmpty">No photo</span></div>
+              <div class="grow">
+                <b>Passenger photo (for seva / upload forms)</b>
+                <p class="muted">Pick a clear front-facing photo. It is cropped and compressed using Photo &amp; panel settings.</p>
+                <div class="row wrap">
+                  <label class="btn"><input id="photoFile" type="file" accept="image/*" hidden> Choose photo…</label>
+                  <button type="button" id="photoRemove" class="btn ghost">Remove</button>
+                </div>
+                <small id="photoInfo" class="muted"></small>
+              </div>
+            </div>
+            <div id="formIssues" class="issues"></div>
+            <div class="row">
+              <button class="btn primary" type="submit">Save passenger</button>
+              <button class="btn" type="button" id="cancelEdit">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXCEL IMPORT -->
+    <section id="tab-import" class="tab">
+      <h2>Import devotees from Excel</h2>
+      <p class="muted">Fill the template in Excel or Google Sheets (one row per devotee), then upload it here. Devotees are added to the profile named in each row. A new profile is created when the name doesn't exist yet; a devotee already in that profile (same name and date of birth) is updated, not duplicated. Photos are not in the Excel: add them afterwards under Profiles.</p>
+
+      <div class="card impSteps">
+        <div class="impStep">
+          <b>1. Download the template</b>
+          <p class="muted">Columns: Profile Name, Devotee Name, Date of Birth, Gender, Photo ID Type, Photo ID Number, Gotram, then the profile's address and contact. Dropdowns are built in.</p>
+          <a id="dlTemplate" class="btn" href="templates/TTD-Devotees-Template.xlsx" download="TTD-Devotees-Template.xlsx">⬇ Download Excel template</a>
+        </div>
+        <div class="impStep">
+          <b>2. Fill it</b>
+          <p class="muted">Write the profile name and address on the <b>first row</b> of each family; rows below with an empty Profile Name belong to the same profile. Date of birth as DD/MM/YYYY. Gotram is needed only for Homam.</p>
+        </div>
+        <div class="impStep">
+          <b>3. Upload</b>
+          <p class="muted">.xlsx or .csv. You'll see a preview before anything is saved.</p>
+          <label class="btn primary"><input id="impFile" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" hidden> 📥 Choose Excel file…</label>
+        </div>
+      </div>
+      <div id="impDrop" class="dropZone">or drop the Excel file here</div>
+      <small id="impMsg"></small>
+
+      <div id="impPreview" class="card" hidden>
+        <div class="row between wrap">
+          <div><h3>Preview</h3><small id="impSummary" class="muted"></small></div>
+          <div class="row wrap">
+            <button id="impCancel" class="btn ghost">Cancel</button>
+            <button id="impGo" class="btn primary">Import</button>
+          </div>
+        </div>
+        <div class="tableWrap">
+          <table class="sched impTable">
+            <thead><tr><th>Row</th><th>Profile</th><th>Devotee</th><th>DOB · Age</th><th>Gender</th><th>Photo ID</th><th>Gotram</th><th>Action</th><th>Check</th></tr></thead>
+            <tbody id="impBody"></tbody>
+          </table>
+        </div>
+        <div id="impProfiles" class="issues infoBox"></div>
+      </div>
+    </section>
+
+    <!-- MONTHLY SCHEDULE -->
+    <section id="tab-schedule" class="tab">
+      <h2>Monthly release dates</h2>
+      <p class="muted">TTD announces quota dates every month. Pick the month, enter the announced dates and times (IST), then save. Reminders follow these dates. Booking types you don't edit use the default pattern below.</p>
+
+      <div class="card monthBar">
+        <button id="mPrev" class="btn ghost" aria-label="Previous month">‹</button>
+        <div class="grow center"><b id="mName"></b><br><small id="mSummary" class="muted"></small></div>
+        <button id="mNext" class="btn ghost" aria-label="Next month">›</button>
+      </div>
+
+      <div class="tableWrap">
+        <table class="sched">
+          <thead><tr><th>Remind</th><th>Booking</th><th>Release date</th><th>Time (IST)</th><th>No release<br>this month</th><th>Status</th><th>When</th></tr></thead>
+          <tbody id="monthBody"></tbody>
+        </table>
+      </div>
+      <div class="row wrap">
+        <button id="saveMonth" class="btn primary">Save dates for this month</button>
+        <button id="copyPrev" class="btn">Copy previous month's dates</button>
+        <button id="resetMonth" class="btn ghost">Reset month to default pattern</button>
+        <small id="monthMsg"></small>
+      </div>
+
+      <h2>Reminders</h2>
+      <div class="card fields">
+        <label class="check wide"><input id="remEnabled" type="checkbox"> Desktop reminders before each release</label>
+        <label>Remind me (minutes before)<input id="remOffsets" placeholder="30,15,5,0"></label>
+        <label>Monthly "update dates" reminder on day<input id="reviewDay" type="number" min="0" max="28" title="0 = off"></label>
+        <label>at time (IST)<input id="reviewTime" type="time"></label>
+        <div class="wide row wrap">
+          <button id="saveRem" class="btn primary">Save reminder settings</button>
+          <button id="testReminder" class="btn">🔔 Send a test reminder</button>
+          <small id="remMsg"></small>
+        </div>
+      </div>
+
+      <details class="card">
+        <summary><b>Default pattern</b> <small class="muted">(used for any month you haven't edited)</small></summary>
+        <div class="tableWrap" style="margin-top:10px">
+          <table class="sched">
+            <thead><tr><th>Remind</th><th>Booking</th><th>Category</th><th>Day</th><th>Time</th><th>Page link</th><th></th></tr></thead>
+            <tbody id="schedBody"></tbody>
+          </table>
+        </div>
+        <div class="row wrap" style="margin-top:10px">
+          <button id="addSched" class="btn">+ Add booking type</button>
+          <button id="saveSched" class="btn primary">Save pattern</button>
+          <button id="resetSched" class="btn ghost">Reset to defaults</button>
+          <small id="schedMsg"></small>
+        </div>
+      </details>
+    </section>
+
+    <!-- PHOTO & PANEL -->
+    <section id="tab-photo" class="tab">
+      <h2>Photo settings</h2>
+      <p class="muted">Applied when you add a photo. Set these to the size and dimensions the TTD form asks for.</p>
+      <form id="photoForm" class="card fields">
+        <label>Maximum file size (KB)<input name="maxKB" type="number" min="10" max="2000"></label>
+        <label>Longest side (pixels)<input name="maxSide" type="number" min="100" max="3000"></label>
+        <label>Crop
+          <select name="crop">
+            <option value="passport">Passport (3.5 × 4.5)</option>
+            <option value="square">Square</option>
+            <option value="none">Keep original shape</option>
+          </select>
+        </label>
+        <div class="wide row"><button class="btn primary" type="submit">Save</button><small id="photoMsg"></small></div>
+      </form>
+      <h2>On-page panel</h2>
+      <form id="panelForm" class="card fields">
+        <label class="check wide"><input name="autoShow" type="checkbox"> Show the "🙏 Adithya TTD" button on TTD pages</label>
+        <label class="check wide"><input name="autoPicker" type="checkbox"> Pop up the profile picker automatically when a pilgrim details form appears</label>
+        <label class="check wide"><input name="highlight" type="checkbox"> Briefly highlight fields after filling</label>
+      </form>
+    </section>
+
+    <!-- SECURITY -->
+    <section id="tab-security" class="tab">
+      <h2>Security lock</h2>
+      <p class="muted">Encrypts photo ID numbers on this computer (AES-GCM 256-bit, key from your master password). While locked, ID numbers are left blank when filling. The lock resets when the browser closes. If you forget the password, the ID numbers cannot be recovered; re-enter them.</p>
+      <div id="secOff" class="card fields">
+        <label>Master password<input id="pw1" type="password" autocomplete="new-password" minlength="6"></label>
+        <label>Confirm<input id="pw2" type="password" autocomplete="new-password"></label>
+        <div class="wide row"><button id="enableSec" class="btn primary">Turn on lock</button><small id="secMsg1"></small></div>
+      </div>
+      <div id="secOn" class="card" hidden>
+        <p><span id="secState" class="pill"></span></p>
+        <div class="row wrap">
+          <input id="pw3" type="password" placeholder="Master password">
+          <button id="unlockBtn" class="btn primary">Unlock</button>
+          <button id="lockBtn" class="btn">Lock now</button>
+          <button id="disableSec" class="btn danger">Turn off lock</button>
+        </div>
+        <small id="secMsg2"></small>
+      </div>
+    </section>
+
+    <!-- GOOGLE SHEET (v1.5) -->
+    <section id="tab-sheet" class="tab">
+      <h2>Google Sheet link (Adithya TTD Master)</h2>
+      <p class="muted">Connect the extension to your TTD Master Google Sheet. Then the toolbar popup lists pending bookings, ticks their devotees for autofill, and saves the result (Booked / Not booked, ticket number, date) straight into the sheet, with the Telugu WhatsApp message ready to send. Only this web app URL receives data.</p>
+      <div class="card">
+        <div class="grid2col">
+          <label>Web app URL<input id="shUrl" placeholder="https://script.google.com/macros/s/…/exec"></label>
+          <label>API key<input id="shKey" placeholder="ttd_…"></label>
+          <label>Your name (shown in the sheet's history)<input id="shUser" placeholder="e.g. Counter 1"></label>
+        </div>
+        <p class="muted small">Find both values in the dashboard: Settings › Chrome extension link.</p>
+        <div class="row wrap">
+          <button id="shSave" class="btn primary">Save &amp; test</button>
+          <button id="shClear" class="btn ghost">Disconnect</button>
+          <small id="shMsg"></small>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Pull devotees from the sheet</h3>
+        <p class="muted">Brings devotees from the sheet's Customers tab into your extension profiles (profile = family). You see the usual import preview first. Same name and date of birth = updated, not duplicated.</p>
+        <div class="row wrap">
+          <button id="shPullPending" class="btn primary">⬇ Devotees with pending bookings</button>
+          <button id="shPullAll" class="btn">⬇ All devotees</button>
+          <small id="shPullMsg"></small>
+        </div>
+      </div>
+    </section>
+
+    <!-- BACKUP -->
+    <section id="tab-backup" class="tab">
+      <h2>Backup &amp; restore</h2>
+      <p class="muted">Save all profiles, passengers, photos, monthly dates and settings to a file, or move them to another computer. With the lock on, ID numbers stay encrypted in the backup.</p>
+      <div class="card row wrap">
+        <button id="exportBtn" class="btn primary">Export backup (.json)</button>
+        <label class="btn"><input id="importFile" type="file" accept=".json,application/json" hidden> Import backup…</label>
+        <small id="backupMsg"></small>
+      </div>
+    </section>
+
+    <!-- HELP -->
+    <section id="tab-help" class="tab">
+      <h2>How to use</h2>
+      <ol class="steps">
+        <li>Under <b>Profiles</b>, create a profile (e.g. "My Family"), fill its <b>address &amp; contact</b>, and add its <b>passengers</b> with photos if your seva form needs them. Add as many profiles as you like.</li>
+        <li>Each month, open <b>Monthly dates &amp; reminders</b> and enter the dates TTD announced. Reminders pop up 30, 15 and 5 minutes before.</li>
+        <li>Before release time, log in at <a href="https://ttdevasthanams.ap.gov.in/home/dashboard" target="_blank" rel="noopener">ttdevasthanams.ap.gov.in</a>, then pick the service (Special Entry Darshan, Arjitha Seva, Angapradakshinam, Homam…), date and slot <b>yourself</b>.</li>
+        <li>When the pilgrim details form appears, the <b>profile picker</b> pops up on screen. Choose a profile, tick passengers and click <b>Autofill</b>. You can reopen it any time from the <b>🙏 Adithya TTD</b> button or press <kbd>Alt+Shift+F</kbd>.</li>
+        <li>If a box refuses autofill, orange <b>Click &amp; Paste</b> buttons appear. Click one, press <kbd>Ctrl+V</kbd>, move on. Buttons turn green ✓ when correct.</li>
+        <li>For photo uploads, click <b>Attach photos</b>, or drag a thumbnail from the panel onto the upload box.</li>
+        <li>Check every field, type the CAPTCHA, and submit and pay on TTD yourself.</li>
+      </ol>
+      <div class="card warn">
+        This extension never fills CAPTCHA, date, slot, amount or declarations. It never submits, pays or bypasses TTD's queue or protections. It is an independent helper, not affiliated with or endorsed by Tirumala Tirupati Devasthanams. It sends no data anywhere.
+      </div>
+    </section>
+  </main>
+  <script src="lib/core.js"></script>
+  <script src="lib/sheet-reader.js"></script>
+  <script src="options.js"></script>
+  <script src="import.js"></script>
+  <script src="lib/sheet-sync.js"></script>
+  <script src="options-sheet.js"></script>
+</body>
+</html>

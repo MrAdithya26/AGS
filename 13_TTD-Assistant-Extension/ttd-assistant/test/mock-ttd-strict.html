@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mock TTD (strict)</title>
+<style>
+  body { font: 14px "Segoe UI", system-ui, sans-serif; margin: 24px; background: #fdeef0; color: #333; }
+  .card { background: #fff; border-radius: 18px; padding: 18px 22px; margin: 12px 0; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.3fr 1.3fr; gap: 26px; margin-top: 18px; }
+  .mat-form-field { position: relative; }
+  .mat-form-field label { color: #777; font-size: 14px; }
+  .mat-form-field label i { color: #e33; font-style: normal; }
+  .mat-form-field input { width: 100%; border: 0; border-bottom: 1px solid #999; padding: 4px 0; font-size: 14px; outline: none; background: transparent; }
+  .mat-form-field input:disabled { border-bottom-style: dotted; }
+  .arrow { position: absolute; right: 4px; top: 22px; pointer-events: none; }
+  .err { color: #c22; font-size: 13px; min-height: 18px; }
+  .panel { position: absolute; top: 48px; left: 0; right: 0; background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.2); z-index: 5; }
+  .panel mat-option { display: block; padding: 8px 12px; cursor: pointer; }
+  .panel mat-option:hover { background: #f3f3f3; }
+</style>
+</head>
+<body>
+<!-- Behaves like the real TTD pilgrim form: text boxes ignore script-typed values,
+     Gender / Photo ID Proof are text boxes with a dropdown list, and Photo Id Number
+     stays disabled until a proof is chosen. -->
+<div class="card"><b>Pilgrim Details</b><div id="rows"></div></div>
+<div class="card"><b>Address Details</b>
+  <div class="grid" style="grid-template-columns: repeat(4, 1fr)">
+    <div class="mat-form-field"><label>Mail ID <i>*</i></label><input formcontrolname="mailId" class="strict"><div class="err"></div></div>
+    <div class="mat-form-field"><label>Mobile Number <i>*</i></label><input formcontrolname="mobile" class="strict"><div class="err"></div></div>
+    <div class="mat-form-field"><label>Country <i>*</i></label><input formcontrolname="country" class="mat-autocomplete-trigger ac" aria-autocomplete="list" data-opts="British Indian Ocean Territory,India,Indonesia,Nepal,Sri Lanka"><span class="arrow">⌄</span><div class="err"></div></div>
+    <div class="mat-form-field"><label>State <i>*</i></label><input formcontrolname="state" readonly class="mat-autocomplete-trigger dd loose" data-opts="Andhra Pradesh,Karnataka,Tamil Nadu,Telangana"><span class="arrow">⌄</span><div class="err"></div></div>
+    <div class="mat-form-field"><label>District <i>*</i></label><input formcontrolname="district" readonly disabled class="mat-autocomplete-trigger dd loose" data-opts=""><span class="arrow">⌄</span><div class="err"></div></div>
+    <div class="mat-form-field"><label>City / Town <i>*</i></label><input formcontrolname="city" class="strict"><div class="err"></div></div>
+    <div class="mat-form-field"><label>Pincode <i>*</i></label><input formcontrolname="pincode" class="strict"><div class="err"></div></div>
+    <div class="mat-form-field"><label>Captcha <i>*</i></label><input formcontrolname="captcha" class="strict"><div class="err"></div></div>
+  </div>
+</div>
+<script>
+  const rows = document.getElementById('rows');
+  for (let i = 0; i < 2; i++) {
+    const g = document.createElement('div');
+    g.className = 'grid';
+    g.innerHTML = `
+      <div class="mat-form-field"><label>Name <i>*</i></label><input formcontrolname="name" class="strict"><div class="err"></div></div>
+      <div class="mat-form-field"><label>Age <i>*</i></label><input formcontrolname="age" class="strict"><div class="err"></div></div>
+      <div class="mat-form-field"><label>Gender <i>*</i></label><input formcontrolname="gender" readonly class="mat-autocomplete-trigger dd" data-opts="Male,Female,Transgender"><span class="arrow">⌄</span><div class="err"></div></div>
+      <div class="mat-form-field"><label>Photo ID Proof <i>*</i></label><input formcontrolname="idProof" readonly class="mat-autocomplete-trigger dd" data-opts="AADHAR CARD,PASSPORT,PAN CARD,VOTER ID"><span class="arrow">⌄</span><div class="err"></div></div>
+      <div class="mat-form-field"><label>Photo Id Number <i>*</i></label><input formcontrolname="idNumber" class="strict" disabled><div class="err"></div></div>`;
+    rows.appendChild(g);
+  }
+  // Script-typed values are wiped, like TTD does.
+  document.querySelectorAll('input.strict').forEach(inp => {
+    inp.addEventListener('input', e => { if (!e.isTrusted) inp.value = ''; });
+    inp.addEventListener('blur', () => { inp.parentElement.querySelector('.err').textContent = inp.value ? '' : 'This field cannot be empty'; });
+  });
+  const DISTRICTS = { 'Telangana': 'Hyderabad,Rangareddy,Warangal', 'Andhra Pradesh': 'Chittoor,Tirupati,Krishna', 'Karnataka': 'Bengaluru Urban,Mysuru', 'Tamil Nadu': 'Chennai,Vellore' };
+  function openList(inp, opts, strict) {
+    document.querySelectorAll('.panel').forEach(p => p.remove());
+    const p = document.createElement('div');
+    p.className = 'panel';
+    p.innerHTML = opts.map(o => `<mat-option role="option">${o}</mat-option>`).join('');
+    p.addEventListener('click', ev => {
+      if (strict && !ev.isTrusted) return;
+      const o = ev.target.closest('mat-option');
+      if (!o) return;
+      inp.value = o.textContent;
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+      p.remove();
+      const name = inp.getAttribute('formcontrolname');
+      if (name === 'idProof') inp.closest('.grid').querySelector('[formcontrolname=idNumber]').disabled = false;
+      if (name === 'state') {
+        // District list loads a moment after State is chosen.
+        const dist = document.querySelector('[formcontrolname=district]');
+        dist.value = ''; dist.disabled = true;
+        setTimeout(() => { dist.dataset.opts = DISTRICTS[o.textContent] || ''; dist.disabled = false; }, 300);
+      }
+    });
+    inp.parentElement.appendChild(p);
+  }
+  // Pilgrim dropdowns: open and pick on a real click only. Address dropdowns ("loose"): any click, like Angular.
+  document.querySelectorAll('input.dd').forEach(inp => {
+    inp.addEventListener('click', e => {
+      const strict = !inp.classList.contains('loose');
+      if (strict && !e.isTrusted) return;
+      openList(inp, inp.dataset.opts.split(',').filter(Boolean), strict);
+    });
+  });
+  // Country: type to filter; only typed (trusted) input counts.
+  document.querySelectorAll('input.ac').forEach(inp => {
+    inp.addEventListener('input', e => {
+      if (!e.isTrusted) { inp.value = ''; return; }
+      const q = inp.value.toLowerCase();
+      openList(inp, inp.dataset.opts.split(',').filter(o => o.toLowerCase().includes(q)), false);
+    });
+  });
+</script>
+
+<!-- Stand-in for the Chrome extension APIs, so content.js runs on a plain page. -->
+<script>
+  window.__ATBA_TEST = true;
+  const store = {
+    profiles: [{ id: 'fam', name: 'My Family',
+      contact: { mobile: '9876543210', email: 'family@example.com', city: 'Secunderabad', district: 'Hyderabad', state: 'Telangana', pincode: '500003', country: 'India' },
+      pilgrims: [
+        { id: 'a', name: 'Adithya Kumar', dob: '1992-03-10', gender: 'Male', idType: 'Aadhaar Card', idNumber: '234123412346' },
+        { id: 'b', name: 'Lakshmi Devi', dob: '1993-11-02', gender: 'Female', idType: 'Aadhaar Card', idNumber: '987654321098' }
+      ] }],
+    activeProfileId: 'fam', selectedIds: ['a', 'b'],
+    panel: { autoShow: true, highlight: true, autoPicker: false }
+  };
+  async function handle(msg) {
+    const s = await ATBA.load();
+    const prof = ATBA.activeProfile(s);
+    if (msg.type === 'getFillData') {
+      const sel = s.selectedIds;
+      return { profiles: s.profiles.map(p => ({ id: p.id, name: p.name, count: p.pilgrims.length, city: p.contact.city })),
+        activeProfileId: prof.id, profileName: prof.name, self: prof.contact, locked: false, panel: s.panel, selectedIds: sel,
+        pilgrims: sel.map(id => prof.pilgrims.find(p => p.id === id)),
+        all: prof.pilgrims.map(p => ({ id: p.id, name: p.name, age: ATBA.ageFrom(p.dob), gender: p.gender, hasPhoto: false })) };
+    }
+    if (msg.type === 'setSelected') store.selectedIds = msg.ids;
+    return { ok: true };
+  }
+  window.chrome = {
+    runtime: { lastError: null, onMessage: { addListener() {} }, sendMessage(msg, cb) { handle(msg).then(r => setTimeout(() => cb(r), 5)); } },
+    storage: { local: {
+      get: async k => (k == null ? JSON.parse(JSON.stringify(store)) : typeof k === 'string' ? { [k]: store[k] } : {}),
+      set: async o => Object.assign(store, o), remove: async () => {}
+    } }
+  };
+</script>
+<script src="../lib/core.js"></script>
+<script src="../content.js"></script>
+</body>
+</html>

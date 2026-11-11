@@ -1,0 +1,258 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>AGS Services Master - Guide</title>
+<style>
+@font-face { font-family: 'NotoTe'; src: url('fonts/noto-sans-telugu-telugu-400-normal.woff2') format('woff2'); font-weight: 400; }
+@font-face { font-family: 'NotoTe'; src: url('fonts/noto-sans-telugu-telugu-600-normal.woff2') format('woff2'); font-weight: 600; }
+@page { size: A4; margin: 16mm 15mm 18mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Inter', 'NotoTe', sans-serif; color: #0F172A; font-size: 10.5pt; line-height: 1.5; margin: 0; }
+.te { font-family: 'NotoTe', 'Inter', sans-serif; }
+h1 { font-size: 26pt; margin: 0; letter-spacing: -.02em; }
+h2 { font-size: 15pt; margin: 0 0 8px; padding-top: 4px; letter-spacing: -.01em; break-after: avoid; }
+h3 { font-size: 11.5pt; margin: 14px 0 6px; break-after: avoid; }
+p { margin: 0 0 8px; } ul, ol { margin: 0 0 10px; padding-left: 20px; } li { margin: 2px 0; }
+.page { break-before: page; }
+.cover { height: 250mm; display: flex; flex-direction: column; justify-content: space-between; }
+.cover .band { background: #0E1B34; color: #fff; border-radius: 10px; padding: 34px 32px; }
+.cover .logo { width: 54px; height: 54px; border-radius: 12px; background: #2563EB; display: grid; place-items: center; font-weight: 700; font-size: 16pt; margin-bottom: 22px; }
+.cover .sub { color: #C7D2E5; font-size: 12pt; margin-top: 6px; }
+.muted { color: #64748B; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 9pt; }
+.feat { border: 1px solid #E3E8EF; border-radius: 8px; padding: 10px 12px; break-inside: avoid; }
+.feat b { display: block; margin-bottom: 2px; }
+.shot { width: auto; max-width: 100%; max-height: 82mm; margin-left: auto !important; margin-right: auto !important; border: 1px solid #E3E8EF; border-radius: 8px; margin: 6px 0 4px; display: block; }
+.cap { font-size: 8.5pt; color: #64748B; margin-bottom: 10px; }
+.fig { break-inside: avoid; }
+.step { display: grid; grid-template-columns: 26px 1fr; gap: 10px; margin-bottom: 9px; break-inside: avoid; }
+.step .n { width: 24px; height: 24px; border-radius: 50%; background: #2563EB; color: #fff; font-weight: 600; font-size: 9.5pt; display: grid; place-items: center; }
+.box { border-left: 3px solid #2563EB; background: #F4F7FD; padding: 8px 12px; border-radius: 0 6px 6px 0; margin: 8px 0 12px; break-inside: avoid; }
+.warn { border-left-color: #B45309; background: #FEF6EA; }
+code, .k { font-family: ui-monospace, Menlo, monospace; font-size: 9pt; background: #F1F4F8; border: 1px solid #E3E8EF; border-radius: 4px; padding: 0 4px; }
+table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 9.5pt; break-inside: avoid; }
+th { text-align: left; background: #F4F6FA; color: #334155; font-weight: 600; }
+th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
+.toc li { margin: 4px 0; }
+.check li { list-style: none; margin-left: -18px; } .check li::before { content: '☐  '; }
+</style></head><body>
+
+<section class="cover">
+  <div class="band">
+    <div class="logo">AGS</div>
+    <h1>AGS Services Master</h1>
+    <div class="sub">CRM for TTD, travel, CSC applications and counter services</div>
+    <div class="sub" style="margin-top:22px">Install guide · User guide · Key features · తెలుగు సారాంశం</div>
+  </div>
+  <div>
+    <p><b>Adithya Internet &amp; CSC Center</b> · Adithya Group of Services · Srikakulam</p>
+    <p class="muted">Version 3.0 · November 2026 · Runs free on your own Google account</p>
+    <h3>Contents</h3>
+    <ol class="toc">
+      <li>Key features</li><li>What you need</li><li>Install step by step (one time, about 20 minutes)</li>
+      <li>Open it on every phone and PC</li><li>Optional: TTD Chrome extension and SMS</li>
+      <li>How to use it every day</li><li>Before you go live: checklist</li><li>Updating, backups and data safety</li>
+      <li>Troubleshooting</li><li>తెలుగు సారాంశం (Telugu summary)</li>
+    </ol>
+  </div>
+</section>
+
+<section class="page">
+  <h2>1. Key features</h2>
+  <p>One system for the whole centre. Every customer, booking, application, sale, payment and message is in one Google Sheet you own, with a dashboard that works on any phone or PC.</p>
+  <div class="grid3">
+    <div class="feat"><b>18 departments in one place</b>TTD, Train, Bus, Flight, Aadhaar, PAN, Voter ID, Certificates, Ration &amp; Pension, Govt Schemes, Passport, RTO, Tax &amp; Business, Insurance, Exams &amp; Jobs, Bill Payments, Banking, Counter.</div>
+    <div class="feat"><b>Pro dashboard</b>Money received, service income, new and completed work with change vs last period, monthly chart by service line, work queue, coming-up list.</div>
+    <div class="feat"><b>TTD desk</b>Devotee families, quota release calendar with countdown, release-day board, TTD logins, lucky dip, refunds. Works with your TTD Chrome extension.</div>
+    <div class="feat"><b>Travel</b>Route, train / bus / flight no, class, quota, passengers, PNR, seat, CNF / RAC / WL, journey reminder.</div>
+    <div class="feat"><b>Application tracking</b>Document checklist, application no, expected date, steps Applied → In process → Ready → Delivered, overdue alerts.</div>
+    <div class="feat"><b>Quick sale</b>Bill payments, recharge, AEPS, xerox in one line. Counted in daily income.</div>
+    <div class="feat"><b>Telugu + English messages</b>The right WhatsApp / SMS message for every step is prepared automatically. One click to send.</div>
+    <div class="feat"><b>Automatic reminder SMS</b>Day-before reminders for darshans and journeys through your SMS gateway (optional).</div>
+    <div class="feat"><b>Receipts</b>Bilingual receipt with govt fee and service charge shown separately. A4, A5 or 80 mm thermal, or Save as PDF.</div>
+    <div class="feat"><b>Reports</b>By department, daily income, by service, by staff, by TTD login, refund register, Excel export.</div>
+    <div class="feat"><b>Staff logins</b>Name + PIN for each person, Admin and Staff roles, every change in the Activity log.</div>
+    <div class="feat"><b>Free and private</b>No monthly fee. Data stays in your Google Drive. ID numbers are masked on screen and never printed.</div>
+  </div>
+  <div class="fig"><img class="shot" src="shots/01-dashboard.jpg"><div class="cap">Dashboard: key numbers, money by service line, work queue.</div></div>
+</section>
+
+<section class="page">
+  <h2>2. What you need</h2>
+  <ul>
+    <li>The shop's <b>Google account</b> (Gmail). Use the same account every time.</li>
+    <li>A <b>PC or laptop with Chrome</b> for the one-time setup.</li>
+    <li>The folder <b>1-Install</b> from this package (5 files).</li>
+    <li>About <b>20 minutes</b>. No payment is needed.</li>
+  </ul>
+  <h2 style="margin-top:14px">3. Install step by step (one time)</h2>
+  <h3>A. Create the Google Sheet</h3>
+  <div class="step"><span class="n">1</span><div>Open <b>sheets.new</b> in Chrome (signed in with the shop account). Rename the sheet <b>AGS Services Master</b>.</div></div>
+  <div class="step"><span class="n">2</span><div>Menu <b>Extensions › Apps Script</b>. A code editor opens in a new tab.</div></div>
+  <h3>B. Paste the 5 files</h3>
+  <p>Open each file from <b>1-Install</b> in Notepad, press <span class="k">Ctrl+A</span>, <span class="k">Ctrl+C</span>, and paste it into the editor:</p>
+  <table><tr><th>File in 1-Install</th><th>In the Apps Script editor</th></tr>
+    <tr><td>1-Code.gs</td><td>Click <b>Code.gs</b>, delete everything, paste.</td></tr>
+    <tr><td>2-Index.html</td><td><b>＋ › HTML</b>, name it <code>Index</code> (no ".html"), paste.</td></tr>
+    <tr><td>3-Styles.html</td><td><b>＋ › HTML</b>, name it <code>Styles</code>, paste.</td></tr>
+    <tr><td>4-App.html</td><td><b>＋ › HTML</b>, name it <code>App</code>, paste.</td></tr>
+    <tr><td>5-appsscript.json</td><td>⚙ <b>Project Settings</b> › tick <i>Show "appsscript.json"</i>, open it, replace everything, paste.</td></tr></table>
+  <div class="step"><span class="n">3</span><div>Press <span class="k">Ctrl+S</span> to save.</div></div>
+  <h3>C. Run setup once</h3>
+  <div class="step"><span class="n">4</span><div>In the toolbar choose the function <b>setup</b> and click <b>▶ Run</b>.</div></div>
+  <div class="step"><span class="n">5</span><div>Google asks for permission: choose your account › <b>Advanced</b> › <b>Go to project (unsafe)</b> › <b>Allow</b>. ("Unsafe" only means you wrote the script yourself. Data stays in your account.)</div></div>
+  <div class="step"><span class="n">6</span><div>Go back to the sheet. You now have 9 tabs, about 75 services, release dates and message templates.</div></div>
+  <h3>D. Publish the dashboard</h3>
+  <div class="step"><span class="n">7</span><div><b>Deploy › New deployment</b> › ⚙ › <b>Web app</b>. <i>Execute as</i>: <b>Me</b>. <i>Who has access</i>: <b>Anyone</b>. Click <b>Deploy</b>.</div></div>
+  <div class="step"><span class="n">8</span><div>Copy the <b>Web app URL</b> (ends in <code>/exec</code>). This is your dashboard link. Send it to yourself on WhatsApp.</div></div>
+  <div class="box">"Anyone" only lets people see the login page. Nothing opens without a name and PIN.</div>
+  <h3>E. First login</h3>
+  <div class="step"><span class="n">9</span><div>Open the link and log in with <b>Admin</b> / <b>1234</b>. Then go to <b>Settings</b> and change the PIN straight away.</div></div>
+  <div class="step"><span class="n">10</span><div>Settings › <b>Shop details</b>: phone, address, receipt notes, IRCTC agent ID, receipt paper size. <b>Users</b>: add each staff member with their own PIN.</div></div>
+</section>
+
+<section>
+  <h2>4. Open it on every phone and PC</h2>
+  <p>Nothing is installed on the devices. Every device uses the same link and sees the same data.</p>
+  <div class="grid2">
+    <div><ul>
+      <li><b>Android:</b> open the link in Chrome › ⋮ › <b>Add to Home screen</b>. It opens like an app.</li>
+      <li><b>iPhone:</b> Safari › Share › <b>Add to Home Screen</b>.</li>
+      <li><b>PC:</b> open the link and bookmark it (<span class="k">Ctrl+D</span>).</li>
+      <li>Each person logs in with their own name and PIN. The login lasts 6 hours.</li>
+    </ul></div>
+    <div><img class="shot" style="width:55%;margin:0 auto" src="shots/13-mobile.jpg"></div>
+  </div>
+  <h2 style="margin-top:12px">5. Optional extras</h2>
+  <h3>TTD Chrome extension (only on PCs where you book TTD)</h3>
+  <ol>
+    <li>Unzip the file in <b>3-Optional-TTD-Chrome-Extension</b> to a permanent folder, e.g. <code>C:\AGS\ttd-extension</code>.</li>
+    <li>Chrome › <code>chrome://extensions</code> › turn on <b>Developer mode</b> › <b>Load unpacked</b> › choose that folder. Pin it.</li>
+    <li>Dashboard › Settings › <b>Create API key</b>. Extension › Options › <b>Google Sheet</b>: paste the Web app URL and the key › <b>Save &amp; test</b>.</li>
+  </ol>
+  <h3>SMS for customers without WhatsApp</h3>
+  <ul>
+    <li><b>Free:</b> install "SMS Gateway for Android" (sms-gate.app) on a spare phone with a SIM pack, turn on Cloud server, enter its username and password in Settings › SMS.</li>
+    <li><b>Paid:</b> Fast2SMS charges for <b>every</b> SMS, including tests, bulk SMS and automatic reminders.</li>
+    <li>Then Settings › <b>Automatic reminder SMS</b>: choose who gets it, the time and how many days before.</li>
+  </ul>
+  <div class="box warn">If you want zero cost, use the Android gateway, or just use WhatsApp. WhatsApp messages from the dashboard are always free.</div>
+  <div class="fig"><img class="shot" src="shots/11-settings.jpg"><div class="cap">Settings: shop details, extension link, SMS and automatic reminders.</div></div>
+</section>
+
+<section class="page">
+  <h2>6. How to use it every day</h2>
+  <h3>New booking or application</h3>
+  <ol>
+    <li>Click <b>New booking</b> (top right) and choose the <b>Department</b> first. The form changes to fit it.</li>
+    <li>Search the customer's family, or type name and mobile for a walk-in. Pick the <b>service</b>: price and service charge fill in.</li>
+    <li>For applications, tick the <b>documents received</b>. For travel, fill route, class and passengers.</li>
+    <li>Enter the amount received and click <b>Create booking</b>. The "received" message opens ready to send.</li>
+  </ol>
+  <div class="fig"><img class="shot" src="shots/02-new-booking.jpg"><div class="cap">New booking: department first, then customer, service and documents.</div></div>
+  <h3>Move the work forward</h3>
+  <table><tr><th>Type</th><th>Buttons in the booking</th><th>Customer gets</th></tr>
+    <tr><td>TTD</td><td>Attempting · Booked · Not booked · Lucky dip · Paid, no ticket</td><td>Booked details or refund message</td></tr>
+    <tr><td>Train / bus / flight</td><td>Booked (PNR, seat, CNF/WL) · Not booked · Cancel</td><td>Ticket details, journey reminder</td></tr>
+    <tr><td>Applications</td><td>Applied · In process · Ready · Delivered · Rejected</td><td>Application no, expected date, "ready to collect"</td></tr>
+    <tr><td>Counter work</td><td>Completed</td><td>"Work completed" (optional)</td></tr></table>
+  <p>After each step the right Telugu or English message is ready. Click <b>Send on WhatsApp</b> (or SMS), then it is marked as sent.</p>
+  <div class="fig"><img class="shot" src="shots/05-application.jpg"><div class="cap">Application ready to collect: one click sends the Telugu message.</div></div>
+</section>
+
+<section>
+  <h3>Quick sale (bills, recharge, AEPS, xerox)</h3>
+  <p>Click <b>Quick sale</b> at the top, pick the service, enter the amount and payment mode, save. Tick "Print receipt" if the customer wants one.</p>
+  <div class="fig"><img class="shot" src="shots/03-quick-sale.jpg"><div class="cap">Quick sale: one line, counted in today's income.</div></div>
+  <h3>Travel bookings</h3>
+  <div class="fig"><img class="shot" src="shots/06-travel.jpg"><div class="cap">Train booking with PNR, seat and CNF status, and the ticket message.</div></div>
+</section>
+
+<section>
+  <h3>Receipts</h3>
+  <p>Open any booking › <b>Receipt</b> › choose A4, A5 or 80 mm › <b>Print / Save as PDF</b>. Save as PDF to send on WhatsApp.</p>
+  <div class="fig"><img class="shot" style="width:75%" src="shots/07-receipt.jpg"></div>
+  <h3>TTD release day</h3>
+  <p><b>Release day board</b> shows TTD requests in columns: Requested, Attempting, Booked, Not booked. Book on the TTD site with the extension, then mark the result.</p>
+  <div class="fig"><img class="shot" src="shots/12-board.jpg"></div>
+</section>
+
+<section>
+  <h3>Bookings list and filters</h3>
+  <p>Search by name, mobile, booking no, PNR or train no. Filter by department, status, month and TTD login. Export to Excel or send Bulk SMS to the filtered list.</p>
+  <div class="fig"><img class="shot" src="shots/04-bookings.jpg"></div>
+  <h3>Reports and month end</h3>
+  <p><b>Reports</b> shows income by department, daily income (with quick sales), by service, by staff and by TTD login, plus the refund register. <i>Received</i> is all money taken in. <i>Service income</i> is only your charges on finished work.</p>
+  <div class="fig"><img class="shot" src="shots/09-reports.jpg"></div>
+</section>
+
+<section>
+  <h3>Services &amp; prices</h3>
+  <p>Every service has its fee, service charge, documents needed and usual days. Edit them here; new bookings use them automatically.</p>
+  <div class="fig"><img class="shot" src="shots/10-services.jpg"></div>
+  <h2 style="margin-top:12px">7. Before you go live: checklist</h2>
+  <ul class="check">
+    <li>Admin PIN changed from 1234. Each staff member has their own login.</li>
+    <li>Shop details filled: phone, address, receipt notes, IRCTC agent ID, paper size.</li>
+    <li><b>Services &amp; prices:</b> real fee, service charge, documents and days set for every service you offer. Services you don't offer set to Active = No. (The starter values are only samples.)</li>
+    <li>Release calendar: this month's TTD dates checked against the TTD announcement.</li>
+    <li>Optional: SMS gateway tested with "Send test SMS", then reminders switched on.</li>
+    <li>Print one receipt on your shop printer.</li>
+    <li>2-Step Verification turned on for the shop's Google account.</li>
+  </ul>
+</section>
+
+<section class="page">
+  <h2>8. Updating, backups and data safety</h2>
+  <h3>Installing a new version later</h3>
+  <ol><li>Apps Script editor: paste the new files over the old ones (same 5 names).</li>
+    <li>Run <b>setup</b> once (new columns are added; your data stays).</li>
+    <li><b>Deploy › Manage deployments › ✎ › Version: New version › Deploy</b>. The link stays the same, so no device needs changing.</li></ol>
+  <h3>Backups</h3>
+  <ul><li>Google Sheets keeps every version: <b>File › Version history</b>.</li>
+    <li>Export to Excel from Bookings or Reports once a month.</li>
+    <li>Every release of this system is kept in Google Drive › ABD Innovations › Adithya Group of Services › AGS Services Master (CRM), with full git history.</li></ul>
+  <h3>Data safety</h3>
+  <ul><li>The sheet holds customers' Aadhaar numbers. Never share the sheet itself. Staff use only the dashboard link and their own PIN.</li>
+    <li>ID numbers are masked on screen and never printed on receipts.</li>
+    <li>Never send the API key, SMS password or PINs on WhatsApp.</li>
+    <li>Book train tickets only on your authorised IRCTC agent ID. The system records bookings; it does not log in to or fill IRCTC, bus, airline or government sites.</li></ul>
+  <h2 style="margin-top:14px">9. Troubleshooting</h2>
+  <table><tr><th>Problem</th><th>What to do</th></tr>
+    <tr><td>"Please log in again"</td><td>The 6-hour login ended. Log in again.</td></tr>
+    <tr><td>Changes don't show on other devices</td><td>Click <b>Refresh</b> in the sidebar.</td></tr>
+    <tr><td>Changed the code but nothing changed</td><td>You must create a <b>New version</b> in Manage deployments.</td></tr>
+    <tr><td>Daily reminders not going</td><td>Apps Script › Triggers should show one <code>sendDailyReminders</code>. If not, run <b>setup</b> again and save the reminder settings.</td></tr>
+    <tr><td>Test SMS fails</td><td>Check the gateway username, password / API key and balance. The error shows the gateway's reply.</td></tr>
+    <tr><td>Extension says not connected</td><td>Paste the URL ending in <code>/exec</code> and the current API key (a new key stops the old one).</td></tr></table>
+</section>
+
+<section class="page te">
+  <h2>10. తెలుగు సారాంశం</h2>
+  <h3>ఇది ఏమిటి?</h3>
+  <p>AGS Services Master మన సెంటర్ పనులన్నింటికీ ఒకే సిస్టమ్: TTD దర్శనం / సేవలు, రైలు / బస్సు / ఫ్లైట్ టికెట్లు, ఆధార్, పాన్, ఓటర్ ID, సర్టిఫికెట్లు వంటి దరఖాస్తులు, బిల్లులు, రీఛార్జ్, జిరాక్స్. డేటా మొత్తం మీ Google Sheet లో ఉంటుంది. ఖర్చు లేదు.</p>
+  <h3>ఇన్‌స్టాల్ చేయడం (ఒక్కసారి మాత్రమే)</h3>
+  <ol>
+    <li>షాప్ Google అకౌంట్‌తో <b>sheets.new</b> తెరిచి, పేరు <b>AGS Services Master</b> పెట్టండి.</li>
+    <li><b>Extensions › Apps Script</b> తెరిచి <b>1-Install</b> ఫోల్డర్‌లోని 5 ఫైళ్లను పై పట్టికలో చెప్పినట్టు పేస్ట్ చేయండి. Ctrl+S నొక్కండి.</li>
+    <li><b>setup</b> ఎంచుకుని ▶ Run నొక్కండి → Allow చేయండి.</li>
+    <li><b>Deploy › New deployment › Web app</b> (Me / Anyone) → వచ్చిన లింక్ మీ డాష్‌బోర్డ్.</li>
+    <li><b>Admin / 1234</b> తో లాగిన్ అయి వెంటనే PIN మార్చండి. ప్రతి స్టాఫ్‌కు వేరే లాగిన్ ఇవ్వండి.</li>
+    <li>ప్రతి ఫోన్‌లో లింక్ తెరిచి <b>Add to Home screen</b> చేయండి. ఏమీ ఇన్‌స్టాల్ చేయనవసరం లేదు.</li>
+  </ol>
+  <h3>రోజువారీ వాడకం</h3>
+  <ul>
+    <li><b>New booking</b> → ముందు <b>Department</b> ఎంచుకోండి → కస్టమర్, సర్వీస్ ఎంచుకోండి → డబ్బు నమోదు చేసి Create నొక్కండి.</li>
+    <li>దరఖాస్తులకు పత్రాల జాబితాలో కస్టమర్ ఇచ్చినవి టిక్ చేయండి. తర్వాత <b>Applied → In process → Ready → Delivered</b>.</li>
+    <li>రైలు / బస్సు టికెట్ బుక్ అయ్యాక <b>Booked</b> లో PNR, సీటు, CNF/WL నమోదు చేయండి.</li>
+    <li>బిల్లులు, రీఛార్జ్, జిరాక్స్ కోసం <b>Quick sale</b> వాడండి.</li>
+    <li>ప్రతి దశ తర్వాత తెలుగు మెసేజ్ సిద్ధంగా ఉంటుంది → <b>Send on WhatsApp</b> నొక్కండి.</li>
+    <li>రసీదు కోసం బుకింగ్ తెరిచి <b>Receipt</b> → Print లేదా Save as PDF.</li>
+    <li>డాష్‌బోర్డ్‌లో <b>Work queue</b> చూడండి: రీఫండ్‌లు, ఆలస్యమైన దరఖాస్తులు, పంపని మెసేజ్‌లు, తీసుకెళ్లాల్సినవి.</li>
+    <li>నెలాఖరున <b>Reports</b> లో డిపార్ట్‌మెంట్ వారీ, రోజువారీ ఆదాయం చూడండి, Excel లో సేవ్ చేయండి.</li>
+  </ul>
+  <h3>జాగ్రత్తలు</h3>
+  <ul>
+    <li>Services &amp; prices లో అసలు ఫీజు, సర్వీస్ ఛార్జ్ ముందుగా సెట్ చేయండి (ఇచ్చినవి నమూనాలు మాత్రమే).</li>
+    <li>Sheet ను ఎవరితోనూ షేర్ చేయకండి. ఆధార్ నంబర్లు అందులో ఉంటాయి.</li>
+    <li>Fast2SMS లో ప్రతి SMS కు డబ్బు పడుతుంది. ఉచితంగా కావాలంటే Android SMS Gateway లేదా WhatsApp వాడండి.</li>
+  </ul>
+</section>
+</body></html>

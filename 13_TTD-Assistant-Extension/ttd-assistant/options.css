@@ -1,0 +1,99 @@
+body { padding: 0 16px 48px; }
+.top { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 14px; padding: 22px 0 14px; }
+.top h1 { font-size: 22px; color: var(--accent); }
+.tabs { max-width: 1040px; margin: 0 auto 18px; display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.tabs button { border: 0; background: none; color: var(--muted); font: 600 14px "Segoe UI", system-ui, sans-serif; padding: 10px 12px; cursor: pointer; border-bottom: 3px solid transparent; }
+.tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+main { max-width: 1040px; margin: 0 auto; }
+.tab { display: none; }
+.tab.on { display: grid; gap: 14px; }
+h2 { font-size: 18px; }
+p { margin: 0; }
+.wrap { flex-wrap: wrap; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.fields label { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+.fields .wide { grid-column: 1 / -1; }
+label.check { display: flex !important; align-items: center; gap: 8px; font-weight: 500; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.pcard { display: grid; grid-template-columns: 64px 1fr; gap: 12px; }
+.pcard .ph { width: 64px; height: 82px; border-radius: 8px; object-fit: cover; border: 1px solid var(--line); background: var(--bg); display: grid; place-items: center; color: var(--muted); font-size: 11px; }
+.pcard h4 { margin: 0 0 2px; font-size: 15px; }
+.pcard .meta { font-size: 12.5px; color: var(--muted); }
+.pcard .acts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.pcard .acts .btn { padding: 4px 9px; font-size: 12px; }
+.issues:empty { display: none; }
+.issues { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; }
+.issues ul { margin: 0; padding-left: 18px; }
+.ok-text { color: var(--ok); font-size: 12.5px; }
+.err-text { color: var(--err); font-size: 12.5px; font-weight: 600; }
+.editor { display: grid; gap: 14px; border: 2px solid var(--accent-2); }
+.photoEdit { display: flex; gap: 14px; align-items: flex-start; }
+.photoBox { width: 110px; height: 140px; border: 1px dashed var(--line); border-radius: 10px; display: grid; place-items: center; overflow: hidden; background: var(--bg); color: var(--muted); font-size: 12px; flex: none; }
+.photoBox img { width: 100%; height: 100%; object-fit: contain; }
+.photoEdit p { margin: 4px 0 8px; }
+.tableWrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+table.sched { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sched th { text-align: left; padding: 8px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.sched td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.sched input[type=text], .sched input:not([type]) { width: 100%; }
+.sched .label { min-width: 240px; }
+.sched .cat { width: 150px; }
+.sched .day { width: 62px; }
+.sched .url { min-width: 200px; }
+.sched .next { white-space: nowrap; color: var(--muted); font-size: 12px; }
+.profLayout { display: grid; grid-template-columns: 260px 1fr; gap: 18px; align-items: start; }
+.profSide { display: grid; gap: 10px; position: sticky; top: 12px; }
+.profList { display: grid; gap: 6px; }
+.profItem { text-align: left; border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 10px; padding: 10px 12px; cursor: pointer; font: inherit; display: grid; gap: 2px; }
+.profItem:hover { border-color: var(--accent-2); }
+.profItem.on { border: 2px solid var(--accent); background: var(--accent-soft); }
+.profItem b { font-size: 14.5px; }
+.profItem .star { color: var(--accent); font-size: 11px; font-weight: 700; }
+.profDetail { display: grid; gap: 14px; min-width: 0; }
+.profHead { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.nameLbl { display: grid; gap: 4px; font-weight: 600; font-size: 13px; }
+.nameLbl input { font-size: 17px; font-weight: 700; }
+form.card { display: grid; gap: 12px; }
+.monthBar { display: flex; align-items: center; gap: 10px; }
+.monthBar .btn { font-size: 20px; padding: 2px 14px; }
+.monthBar b { font-size: 17px; }
+.center { text-align: center; }
+.sched .edited { color: var(--accent); font-weight: 700; font-size: 12px; white-space: nowrap; }
+.sched .def { color: var(--muted); font-size: 12px; }
+.sched tr.skip td:not(:nth-child(5)) { opacity: .45; }
+.sched .bk b { display: block; font-size: 13px; }
+.sched .bk small { font-size: 11.5px; }
+details summary { cursor: pointer; }
+@media (max-width: 760px) {
+  .profLayout { grid-template-columns: 1fr; }
+  .profSide { position: static; }
+}
+.impSteps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.impStep { display: grid; gap: 6px; align-content: start; }
+.impStep .btn { justify-self: start; text-decoration: none; }
+.dropZone { border: 2px dashed var(--line); border-radius: 12px; padding: 18px; text-align: center; color: var(--muted); font-size: 13px; }
+.dropZone.over { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+#impPreview { display: grid; gap: 12px; }
+#impPreview[hidden] { display: none; }
+.impTable td { font-size: 12.5px; }
+.impTable .act { font-weight: 700; white-space: nowrap; }
+.impTable .act.new { color: var(--ok); }
+.impTable .act.upd { color: var(--accent); }
+.impTable .act.skip { color: var(--err); }
+.impTable .chk ul { margin: 0; padding-left: 16px; color: var(--warn); }
+.impTable .chk .good { color: var(--ok); }
+.impTable tr.skipped td { opacity: .55; }
+.infoBox { background: var(--accent-soft); color: var(--text); }
+.infoBox:empty { display: none; }
+.steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; }
+kbd { background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+@media (max-width: 600px) {
+  .photoEdit { flex-direction: column; }
+  .top h1 { font-size: 18px; }
+}
+
+/* v1.5 Google Sheet tab */
+.grid2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.grid2col label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.grid2col label:first-child { grid-column: 1 / -1; }
+.grid2col input { font-size: 14px; }

@@ -1,6 +1,6 @@
 # AGS – current versions
 
-Updated: 4 Nov 2026. Older versions are in `99_Archive/`, in `releases/` (zips) and in GitHub history.
+Updated: 11 Nov 2026. Older versions are in `99_Archive/`, in `releases/` (zips) and in GitHub history.
 
 ## Apps
 
@@ -8,6 +8,9 @@ Updated: 4 Nov 2026. Older versions are in `99_Archive/`, in `releases/` (zips) 
 | --- | --- | --- | --- | --- |
 | AGS Core WordPress plugin | `02_Website-WordPress/ags-core/` (zip in `releases/`) | **1.0.0** | 27 Oct 2026 | Ready, not installed yet |
 | WhatsApp single-page site | `03_WhatsApp-Site/index.html` | **1.0.0** | 23 Oct 2026 | Ready; placeholder phone/email must be replaced |
+| AGS Services Master – Sheet edition | `12_Services-Master-Sheet/` (zip in `releases/`) | **3.0.0** | 11 Nov 2026 | Ready, not installed yet |
+| AGS TTD Assistant (Chrome extension) | `13_TTD-Assistant-Extension/` (zip in `releases/`) | **1.5.0** | Nov 2026 | Working; links to Sheet edition |
+| AGS Services Master – pro CRM | `04_Platform-Nextjs-Supabase/crm/` | **0.0 (design)** | 11 Nov 2026 | Phase 0 done; Phase 1 next |
 | Next.js + Supabase platform | `04_Platform-Nextjs-Supabase/` | **0.x (in development)** | Sep–Oct 2026 | NO-GO (Phase 2). Code still only in Drive |
 
 ## Documents
@@ -18,6 +21,7 @@ Updated: 4 Nov 2026. Older versions are in `99_Archive/`, in `releases/` (zips) 
 | AGS Core guide (how it works) | `01_Plans-Docs/AGS-CORE-GUIDE.md` | 1.0 | 27 Oct 2026 |
 | Project status | `01_Plans-Docs/PROJECT-STATUS.md` | 4 Nov 2026 | 4 Nov 2026 |
 | Planner tasks (26) | `01_Plans-Docs/PLANNER-TASKS.md` | export 30 Oct | 4 Nov 2026 |
+| AGS Services Master pro CRM plan | `01_Plans-Docs/AGS-SERVICES-MASTER-CRM-PLAN_v1.0.md` | **1.0** | 11 Nov 2026 |
 | Decisions log | `01_Plans-Docs/DECISIONS.md` | – | 4 Nov 2026 |
 
 ## Version rules (short)

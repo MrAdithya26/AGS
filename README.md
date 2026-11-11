@@ -32,6 +32,8 @@ All three use the **same numbered folders**:
 | `09_Finance` | Price list, commission, budget | **No** (private) |
 | `10_Assets-Brand` | Logo, colours, images | Yes |
 | `11_Chat-Records` | One summary file per Claude chat | Yes |
+| `12_Services-Master-Sheet` | AGS Services Master – Sheet edition (current shop CRM) + releases | Yes (demo data only) |
+| `13_TTD-Assistant-Extension` | AGS TTD Assistant Chrome extension + releases | Yes |
 | `99_Archive` | Old versions (never deleted) | Yes |
 
 ---

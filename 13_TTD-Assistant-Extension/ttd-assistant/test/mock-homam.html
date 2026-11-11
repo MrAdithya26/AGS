@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mock TTD Homam Form</title>
+<style>
+  body { font: 14px system-ui, sans-serif; margin: 24px; background: #f6f6f6; color: #222; }
+  .row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; background: #fff; padding: 10px; margin: 8px 0; border-radius: 8px; }
+  .row label { display: grid; gap: 3px; font-size: 12px; }
+  .combo { border: 1px solid #999; padding: 6px; border-radius: 4px; cursor: pointer; background: #fff; position: relative; min-height: 18px; }
+  .menu { position: absolute; top: 100%; left: 0; background: #fff; border: 1px solid #999; z-index: 10; }
+  .menu div { padding: 4px 8px; }
+  fieldset { background: #fff; border-radius: 8px; border: 0; margin: 12px 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+</style>
+</head>
+<body>
+<h2>Mock TTD - Srinivasa Divyanugraha Homam - Devotee details</h2>
+<label>Darshan date <input type="date" id="bookingDate"></label>
+
+<div id="rows"></div>
+
+<fieldset>
+  <legend>Contact</legend>
+  <label>Mobile Number <input id="mobile"></label>
+  <label>Email ID <input id="email"></label>
+  <label>City <input id="city"></label>
+  <label>State <select id="state"><option value="">Select</option><option>Telangana</option><option>Andhra Pradesh</option></select></label>
+  <label>Pincode <input id="pincode"></label>
+</fieldset>
+<label>Enter Captcha <input id="captcha"></label>
+<label><input type="checkbox" id="declare"> I agree to the terms</label>
+
+<script>
+  // Builds three pilgrim rows. Row 2's ID number refuses script input (like some TTD boxes);
+  // Row 3 uses a custom dropdown for gender.
+  const rows = document.getElementById('rows');
+  for (let i = 0; i < 3; i++) {
+    const r = document.createElement('div');
+    r.className = 'row';
+    r.innerHTML = `
+      <label>Pilgrim Name <input formcontrolname="pilgrimName"></label>
+      <label>Age <input formcontrolname="age" type="number"></label>
+      <label>Gender ${i === 2
+        ? '<div class="combo" role="combobox" aria-label="Gender"><span class="v"></span></div>'
+        : '<select formcontrolname="gender"><option value="">Select</option><option value="M">MALE</option><option value="F">FEMALE</option><option value="T">TRANSGENDER</option></select>'}</label>
+      <label>Photo Id Proof <select formcontrolname="idProofType"><option value="">Select</option><option>AADHAAR CARD</option><option>PASSPORT</option><option>PAN CARD</option></select></label>
+      <label>Photo Id Number <input formcontrolname="idProofNumber"></label>
+      <label>Gothram <input formcontrolname="gothram"></label>
+      <label>Upload Photo <input type="file" accept="image/*"></label>`;
+    rows.appendChild(r);
+    if (i === 1) {
+      const idIn = r.querySelector('[formcontrolname=idProofNumber]');
+      idIn.addEventListener('input', e => { if (!e.isTrusted) { idIn.value = ''; } });
+    }
+    if (i === 2) {
+      const c = r.querySelector('.combo');
+      c.addEventListener('click', () => {
+        if (c.querySelector('.menu')) return;
+        const m = document.createElement('div');
+        m.className = 'menu';
+        m.innerHTML = '<div role="option">Male</div><div role="option">Female</div><div role="option">Transgender</div>';
+        m.addEventListener('click', e => { e.stopPropagation(); c.querySelector('.v').textContent = e.target.textContent; m.remove(); });
+        c.appendChild(m);
+      });
+    }
+  }
+</script>
+
+<!-- Stand-in for the Chrome extension APIs, so content.js runs on a plain page. -->
+<script>
+  window.__ATBA_TEST = true;
+  const cv = document.createElement('canvas'); cv.width = 70; cv.height = 90;
+  const cx = cv.getContext('2d'); cx.fillStyle = '#d98a1f'; cx.fillRect(0, 0, 70, 90); cx.fillStyle = '#fff'; cx.beginPath(); cx.arc(35, 35, 18, 0, 7); cx.fill();
+  const photo = cv.toDataURL('image/jpeg', 0.9);
+  const store = {
+    profiles: [
+      { id: 'fam', name: 'My Family',
+        contact: { mobile: '9876543210', email: 'family@example.com', address: '1-2-3 Main Road', city: 'Hyderabad', district: 'Hyderabad', state: 'Telangana', pincode: '500001', country: 'India' },
+        pilgrims: [
+          { id: 'a', name: 'Adithya Kumar', dob: '1990-05-14', gender: 'Male', idType: 'Aadhaar Card', idNumber: '234123412346', photo, gotram: 'Bharadwaja' },
+          { id: 'b', name: 'Lakshmi Devi', dob: '1993-11-02', gender: 'Female', idType: 'Aadhaar Card', idNumber: '987654321098', photo },
+          { id: 'c', name: 'Srinivas Rao', dob: '1958-01-20', gender: 'Male', idType: 'Passport', idNumber: 'K1234567', photo: null }
+        ] },
+      { id: 'par', name: 'Parents',
+        contact: { mobile: '9123456789', email: 'parents@example.com', address: 'Temple Street', city: 'Tirupati', district: 'Tirupati', state: 'Andhra Pradesh', pincode: '517501', country: 'India' },
+        pilgrims: [
+          { id: 'd', name: 'Venkata Ramana', dob: '1955-03-03', gender: 'Male', idType: 'Aadhaar Card', idNumber: '345634563456', photo },
+          { id: 'e', name: 'Padmavathi', dob: '1960-07-07', gender: 'Female', idType: 'Aadhaar Card', idNumber: '456745674567', photo: null }
+        ] }
+    ],
+    activeProfileId: 'fam',
+    selectedIds: ['a', 'b', 'c'],
+    bookingType: 'homam',
+    panel: { autoShow: true, highlight: true, autoPicker: true }
+  };
+  // Mirrors the background worker's message handling.
+  async function handle(msg) {
+    const s = await ATBA.load();
+    const prof = ATBA.activeProfile(s);
+    if (msg.type === 'getFillData') {
+      const all = prof.pilgrims;
+      const sel = s.selectedIds.filter(id => all.some(p => p.id === id));
+      return { profiles: s.profiles.map(p => ({ id: p.id, name: p.name, count: p.pilgrims.length, city: p.contact.city })),
+        activeProfileId: prof.id, profileName: prof.name, self: prof.contact, locked: false, panel: s.panel,
+        selectedIds: sel, pilgrims: sel.map(id => all.find(p => p.id === id)),
+        all: all.map(p => ({ id: p.id, name: p.name, age: ATBA.ageFrom(p.dob), gender: p.gender, gotram: p.gotram || '', hasPhoto: !!p.photo })), bookingType: s.bookingType };
+    }
+    if (msg.type === 'setSelected') store.selectedIds = msg.ids;
+    if (msg.type === 'setBookingType') store.bookingType = msg.id;
+    if (msg.type === 'setGotram') store.profiles.forEach(pr => pr.pilgrims.forEach(x => { if (msg.ids.includes(x.id)) x.gotram = msg.gotram; }));
+    if (msg.type === 'setProfile') { const p = store.profiles.find(x => x.id === msg.profileId); store.activeProfileId = p.id; store.selectedIds = p.pilgrims.slice(0, 6).map(x => x.id); }
+    return { ok: true };
+  }
+  window.chrome = {
+    runtime: {
+      lastError: null,
+      onMessage: { addListener() {} },
+      sendMessage(msg, cb) { handle(msg).then(r => setTimeout(() => cb(r), 5)); }
+    },
+    storage: { local: {
+      get: async k => (k == null ? JSON.parse(JSON.stringify(store)) : typeof k === 'string' ? { [k]: store[k] } : {}),
+      set: async o => Object.assign(store, o), remove: async () => {}
+    } }
+  };
+</script>
+<script src="../lib/core.js"></script>
+<script src="../content.js"></script>
+</body>
+</html>

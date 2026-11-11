@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Adithya TTD Booking Assistant</title>
+  <link rel="stylesheet" href="ui.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="popup">
+  <header class="brand">
+    <img src="icons/icon48.png" alt="" width="28" height="28">
+    <div class="grow">
+      <b>Adithya TTD Booking Assistant</b>
+      <small>Om Namo Venkatesaya</small>
+    </div>
+    <span id="lockPill" class="pill" hidden></span>
+  </header>
+
+  <div id="unlockBox" class="card warn" hidden>
+    <b>🔒 ID numbers are locked</b>
+    <form id="unlockForm" class="row">
+      <input id="unlockPw" type="password" placeholder="Master password" autocomplete="current-password">
+      <button class="btn primary" type="submit">Unlock</button>
+    </form>
+    <small id="unlockMsg"></small>
+  </div>
+
+  <section class="card">
+    <div class="row between"><h3>This tab</h3><small id="tabInfo" class="muted"></small></div>
+    <label class="typeLbl">Booking type
+      <select id="typeSel" aria-label="Booking type"></select>
+    </label>
+    <small id="typeNote" class="muted"></small>
+    <div class="grid2">
+      <button class="btn primary span2" data-act="atba:autofill">Autofill selected passengers</button>
+      <button class="btn span2" data-act="atba:picker">🙏 Choose profile on screen</button>
+      <button class="btn" data-act="atba:paste">Step-by-step (Ctrl+V)</button>
+      <button class="btn" data-act="atba:photos">Attach photos</button>
+      <button class="btn" data-act="atba:contact">Fill address only</button>
+      <button class="btn" data-act="atba:show">Show page panel</button>
+    </div>
+    <small id="actMsg" class="muted"></small>
+  </section>
+
+  <section class="card" id="sheetCard">
+    <div class="row between"><h3>📒 Booking from Google Sheet</h3><small id="sheetInfo" class="muted"></small></div>
+    <div id="sheetOff" hidden><small class="muted">Connect your <b>Adithya TTD Master</b> sheet in <a href="#" id="sheetSetup">Options › Google Sheet</a> to pick pending bookings here and save the result (Booked / Not booked) with one click.</small></div>
+    <div id="sheetOn" hidden>
+      <div class="row"><select id="bkSel" class="grow" aria-label="Pending booking"></select><button class="btn" id="bkReload" title="Reload pending bookings">↻</button></div>
+      <small id="bkInfo" class="muted bkInfo"></small>
+      <button class="btn useBtn" id="bkUse">👥 Select this booking's devotees for autofill</button>
+      <div class="resForm">
+        <input id="rRef" placeholder="TTD booking / ticket no">
+        <div class="row"><input id="rDate" type="date" title="Darshan / seva date"><input id="rSlot" placeholder="Slot e.g. 10:00-11:00"></div>
+        <div class="row"><input id="rAmt" type="number" min="0" placeholder="Ticket ₹"><select id="rLogin" title="TTD login used"></select></div>
+        <button class="btn" id="rScan">🔍 Read details from this page</button>
+      </div>
+      <div class="grid2">
+        <button class="btn okBtn" data-res="Booked">✅ Booked</button>
+        <button class="btn badBtn" data-res="Not Booked">❌ Not booked</button>
+        <button class="btn" data-res="Attempting">▶ Trying now</button>
+        <button class="btn" data-res="Lucky Dip - Registered">🎲 Dip registered</button>
+        <button class="btn span2" data-res="Payment Failed">⚠️ Paid, but no ticket</button>
+      </div>
+      <small id="resMsg" class="resMsg"></small>
+      <div id="msgOut" hidden>
+        <div class="row chanRow"><button class="btn" id="chWa">🟢 WhatsApp</button><button class="btn" id="chSms">📱 SMS</button><small id="smsLen" class="muted grow"></small></div>
+        <textarea id="msgText" rows="7"></textarea>
+        <div class="row"><button class="btn primary grow" id="waBtn">🟢 Send on WhatsApp</button><button class="btn primary grow" id="smsBtn" hidden>📤 Send SMS</button><button class="btn" id="copyBtn">📋 Copy</button></div>
+        <small id="smsHint" class="muted" hidden>No SMS gateway yet: set one in the dashboard (Settings › SMS), or copy the text into your phone.</small>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row between"><h3>Profile</h3><small id="selCount" class="muted"></small></div>
+    <select id="profileSel" class="profileSel" aria-label="Profile"></select>
+    <small id="profAddr" class="muted"></small>
+    <div id="pilgrimList" class="plist"></div>
+    <small class="muted">Ticked passengers fill the form rows in the order shown (#1, #2…).</small>
+  </section>
+
+  <section class="card">
+    <div class="row between"><h3>Ticket releases</h3><a href="#" id="editMonth">✎ Edit this month's dates</a></div>
+    <small id="monthNote" class="muted"></small>
+    <ul id="releases" class="releases"></ul>
+  </section>
+
+  <footer class="row between">
+    <button id="openOptions" class="btn">⚙ Profiles &amp; settings</button>
+    <button id="testReminder" class="btn ghost">🔔 Test reminder</button>
+  </footer>
+  <script src="lib/core.js"></script>
+  <script src="lib/sheet-sync.js"></script>
+  <script src="popup.js"></script>
+  <script src="popup-sheet.js"></script>
+</body>
+</html>

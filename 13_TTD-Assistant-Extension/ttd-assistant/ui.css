@@ -1,0 +1,85 @@
+:root {
+  --bg: #fdf7ef;
+  --card: #ffffff;
+  --text: #2b1d12;
+  --muted: #8a7563;
+  --line: #ecd9c1;
+  --accent: #b4531a;
+  --accent-2: #d98a1f;
+  --accent-soft: #fbe9d3;
+  --ok: #2e9e5b;
+  --ok-soft: #e3f4e8;
+  --warn: #8a5a00;
+  --warn-soft: #fff0d6;
+  --err: #b3261e;
+  --err-soft: #fde3e1;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1d1712;
+    --card: #2a211a;
+    --text: #f3e6d6;
+    --muted: #b9a28a;
+    --line: #4a3829;
+    --accent: #e07b33;
+    --accent-2: #e9a23b;
+    --accent-soft: #3d2b1c;
+    --ok: #4cc27f;
+    --ok-soft: #1f3a29;
+    --warn: #ffd99a;
+    --warn-soft: #43321a;
+    --err: #ff8a80;
+    --err-soft: #4a1f1c;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+h1, h2, h3 { margin: 0; line-height: 1.2; }
+h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); }
+small, .muted { color: var(--muted); font-size: 12px; }
+a { color: var(--accent); }
+.row { display: flex; align-items: center; gap: 8px; }
+.between { justify-content: space-between; }
+.grow { flex: 1; min-width: 0; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+.card.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.btn {
+  border: 1px solid var(--accent);
+  background: var(--card);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font: 600 13px "Segoe UI", system-ui, sans-serif;
+  cursor: pointer;
+}
+.btn:hover { background: var(--accent-soft); }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(.94); }
+.btn.ghost { border-color: transparent; }
+.btn.danger { border-color: var(--err); color: var(--err); }
+.btn:disabled { opacity: .5; cursor: default; }
+input, select, textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+  min-width: 0;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-2); outline-offset: 0; }
+.pill { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.err { background: var(--err-soft); color: var(--err); }

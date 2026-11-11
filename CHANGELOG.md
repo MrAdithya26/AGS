@@ -2,6 +2,16 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 11 Nov 2026 – AGS Services Master: Sheet v3.0, TTD Assistant split, pro CRM plan
+
+Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`
+
+- **New product folder:** `12_Services-Master-Sheet/` – AGS Services Master **3.0.0** (Google Sheet + Apps Script CRM for all departments: TTD, travel, applications, quick sale, receipts, reports, Telugu/English messages, clean navy dashboard) with source, demo, tests, illustrated PDF guide and `releases/AGS-Services-Master-v3.0.0.zip`.
+- **New product folder:** `13_TTD-Assistant-Extension/` – AGS TTD Assistant Chrome extension **1.5.0** kept as its own product (source + `releases/`).
+- **New plan:** `01_Plans-Docs/AGS-SERVICES-MASTER-CRM-PLAN_v1.0.md` – pro CRM on Next.js + Supabase: modules, roadmap, costs, legal rules, open decisions.
+- **New draft:** `04_Platform-Nextjs-Supabase/crm/schema/0001_crm_core.draft.sql` (not applied) and `crm/README.md`.
+- **Changed:** test data in the Sheet edition uses clearly fake ID numbers.
+
 ## 4 Nov 2026 – One project in 3 places, with versions
 
 Chat: `11_Chat-Records/2026-11-04_three-place-sync-and-versioning.md`
