@@ -18,4 +18,6 @@
 
 **12 Nov – Phase 1b done (CRM 0.2.0):** Customer 360 – list/search, new/edit, profile with family, consent (date saved), encrypted IDs (last 4 shown; owner/manager reveal, logged), private documents (Supabase Storage), history; Aadhaar Verhoeff + PAN checks; duplicate warning. Database self-test passed (numbering, audit, encryption, bucket) and left no data.
 
-**Next:** Phase 1c – departments & services editing, workflow steps, form fields.
+**12 Nov – Phase 1c done (CRM 0.3.0):** department editor with services & prices, workflow steps (118 defaults) and form fields; owner/manager only.
+
+**Next:** Phase 1d – jobs engine (create bookings for any department, move through steps, assign staff, timeline, work queue).

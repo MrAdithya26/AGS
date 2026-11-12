@@ -84,3 +84,16 @@ label.f.req::after { content: ''; } textarea.i { width: 100%; border: 1px solid 
 .mono { font-family: ui-monospace, Menlo, monospace; } .te { font-family: 'Noto Sans Telugu', var(--font); }
 .top .badge { margin-left: 4px; }
 @media (max-width: 900px) { .grid3, .kv { grid-template-columns: 1fr; } .span2 { grid-column: auto; } }
+/* Phase 1c: department editor */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.dcard { color: var(--ink); padding: 14px 16px; } .dcard:hover { border-color: var(--accent); }
+.grid4 { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 12px; }
+fieldset.plain { border: 0; padding: 0; margin: 0; min-width: 0; }
+.svcHead, .svcRow { display: grid; grid-template-columns: 2.2fr 1.4fr .9fr .9fr .9fr .6fr 2.4fr .35fr .6fr; gap: 6px; align-items: center; }
+.stepHead, .stepRow { display: grid; grid-template-columns: .5fr 1.6fr 1.6fr 1.4fr 1.8fr .6fr; gap: 6px; align-items: center; flex: 1; }
+.fieldHead, .fieldRow { display: grid; grid-template-columns: 2fr 1.5fr 1fr 2fr 1.1fr .5fr .5fr; gap: 6px; align-items: center; }
+.svcHead, .stepHead, .fieldHead { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 0 2px 6px; }
+.svcRow, .stepRow, .fieldRow { padding: 4px 0; border-top: 1px solid var(--line2); }
+.svcRow .i, .stepRow .i, .fieldRow .i { padding: 6px 8px; font-size: 13px; }
+.newRow { background: var(--panel2); border-radius: 8px; padding: 6px 4px; }
+@media (max-width: 1100px) { .svcHead, .stepHead, .fieldHead { display: none; } .svcRow, .stepRow, .fieldRow, .grid4 { grid-template-columns: 1fr 1fr; } }

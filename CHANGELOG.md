@@ -2,6 +2,14 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 12 Nov 2026 – Pro CRM Phase 1c: departments, services, workflows, form fields (CRM 0.3.0)
+
+Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`
+
+- **New screens:** departments overview (grouped by TTD / Travel / Applications / Counter, with "services without fee" warnings) and a department editor: department name / Telugu name / number prefix / on-off; services and prices (fee, our charge, per, usual days, documents, on-off, add new); workflow steps (order, name, Telugu, result, message to prepare; add / delete – blocked while bookings sit at a step); form fields (label, Telugu, type, list choices, asked at booking or when done, must-fill).
+- **Database (migration 0005, applied):** 118 default workflow steps (same steps and messages as Sheet edition 3.0), default form fields for TTD, travel, applications and counter work, change log on departments, services and steps.
+- Only the owner or a manager can change these (database rules + screen).
+
 ## 12 Nov 2026 – Pro CRM Phase 1b: Customer 360 (CRM 0.2.0)
 
 Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`

@@ -1,27 +1,31 @@
+import Link from 'next/link';
 import { currentStaff } from '@/lib/supabase/server';
 
-type Dept = { id: string; code: string; name: string; name_te: string | null; kind: string; job_prefix: string; active: boolean };
-type Svc = { id: string; department_id: string; name: string; govt_fee: number; service_charge: number; pricing_unit: string; sla_days: number | null; docs_required: string[]; active: boolean };
-const inr = (paise: number) => '₹' + (paise / 100).toLocaleString('en-IN');
+const KIND: Record<string, string> = { ttd: 'TTD', travel: 'Travel', application: 'Applications', quick: 'Counter & bills', home_service: 'Home services' };
 
 export default async function Departments() {
   const { sb } = await currentStaff();
-  const [{ data: depts }, { data: svcs }] = await Promise.all([
+  const [{ data: depts }, { data: svcs }, { data: steps }] = await Promise.all([
     sb.from('departments').select('id, code, name, name_te, kind, job_prefix, active').order('sort'),
-    sb.from('services').select('id, department_id, name, govt_fee, service_charge, pricing_unit, sla_days, docs_required, active').order('name'),
+    sb.from('services').select('department_id, active, govt_fee, service_charge'),
+    sb.from('workflow_steps').select('department_id'),
   ]);
-  const list = (depts ?? []) as Dept[]; const all = (svcs ?? []) as Svc[];
+  const list = depts ?? []; const sv = svcs ?? [];
+  const groups = Object.keys(KIND).map(k => [k, list.filter(d => d.kind === k)] as const).filter(([, l]) => l.length);
   return (<>
     <header className="top"><h1>Departments &amp; services</h1></header>
     <div className="content">
-      <p className="muted" style={{ marginTop: 0 }}>{list.length} departments · {all.length} services. Fees and charges are starting values: set your real ones before going live (editing arrives in Phase 1c).</p>
-      {list.map(d => { const s = all.filter(x => x.department_id === d.id); return (
-        <div className="card" key={d.id} style={{ marginBottom: 14 }}>
-          <h3>{d.name} {d.name_te && <span className="muted" style={{ fontWeight: 400 }}>· {d.name_te}</span>} <span className="badge info" style={{ marginLeft: 6 }}>{d.kind}</span> <span className="badge" style={{ marginLeft: 4 }}>{d.job_prefix}-</span></h3>
-          {s.length ? <div className="tableWrap"><table className="t"><thead><tr><th>Service</th><th className="right">Govt fee</th><th className="right">Charge</th><th>Per</th><th>Days</th><th>Documents</th><th>Active</th></tr></thead><tbody>
-            {s.map(x => <tr key={x.id}><td><b>{x.name}</b></td><td className="right">{inr(x.govt_fee)}</td><td className="right">{inr(x.service_charge)}</td><td>{x.pricing_unit}</td><td>{x.sla_days ?? '—'}</td><td className="small">{x.docs_required.join(', ') || '—'}</td><td>{x.active ? <span className="badge ok">Yes</span> : <span className="badge off">No</span>}</td></tr>)}
-          </tbody></table></div> : <div className="muted small">No services yet.</div>}
-        </div>); })}
+      <p className="muted" style={{ marginTop: 0 }}>Open a department to set real fees and charges, documents, usual days, workflow steps and form fields. <b>Starter fees are samples</b>: please set yours before going live.</p>
+      {groups.map(([k, l]) => <div key={k} style={{ marginBottom: 18 }}>
+        <h3 style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{KIND[k]}</h3>
+        <div className="cards">{l.map(d => { const mine = sv.filter(x => x.department_id === d.id); const unset = mine.filter(x => !x.govt_fee && !x.service_charge).length; return (
+          <Link key={d.id} href={`/departments/${d.id}`} className="card dcard">
+            <div className="row" style={{ justifyContent: 'space-between' }}><b>{d.name}</b>{!d.active && <span className="badge off">off</span>}</div>
+            {d.name_te && <div className="te muted small">{d.name_te}</div>}
+            <div className="small muted" style={{ marginTop: 6 }}>{mine.filter(x => x.active).length} services · {(steps ?? []).filter(x => x.department_id === d.id).length} steps · {d.job_prefix}-</div>
+            {unset > 0 && <div className="small" style={{ color: 'var(--amber)', marginTop: 4 }}>{unset} without fee or charge</div>}
+          </Link>); })}</div>
+      </div>)}
     </div>
   </>);
 }
