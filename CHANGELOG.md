@@ -2,6 +2,14 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 12 Nov 2026 – Pro CRM Phase 1b: Customer 360 (CRM 0.2.0)
+
+Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`
+
+- **New screens:** customer list with search (name, mobile, customer no), new / edit customer, customer profile (details, consent, ID documents, family members, private documents, history, free WhatsApp and call buttons).
+- **Database (migration 0004, applied):** automatic customer numbers C00001…; ID numbers encrypted with a key kept in Supabase Vault, only the last 4 digits shown; full number visible to owner / manager only, every reveal logged; change log for customers and families; private file store `crm-files` (10 MB per file, 5-minute links).
+- **Checks:** Aadhaar check-digit (Verhoeff) and PAN format validation, 10-digit mobile check, duplicate warning (same name + mobile), consent date saved (DPDP Act).
+
 ## 12 Nov 2026 – Pro CRM Phase 1a: foundation (free plan)
 
 Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`

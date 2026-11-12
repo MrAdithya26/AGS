@@ -16,4 +16,6 @@
 
 **12 Nov – Phase 1a done (free plan):** `ags-staging` restored; `crm` schema with 28 tables, 70 row-security rules, owner-first-login trigger, 19 departments + 75 services; Next.js CRM 0.1.0 (login, roles, dashboard, departments, staff). Supabase security checker: no CRM findings. Owner must expose the `crm` schema once (SETUP-GUIDE step 0).
 
-**Next:** Phase 1b – Customer 360 (families, consent, masked IDs, documents).
+**12 Nov – Phase 1b done (CRM 0.2.0):** Customer 360 – list/search, new/edit, profile with family, consent (date saved), encrypted IDs (last 4 shown; owner/manager reveal, logged), private documents (Supabase Storage), history; Aadhaar Verhoeff + PAN checks; duplicate warning. Database self-test passed (numbering, audit, encryption, bucket) and left no data.
+
+**Next:** Phase 1c – departments & services editing, workflow steps, form fields.
