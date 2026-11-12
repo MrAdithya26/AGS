@@ -14,4 +14,6 @@
 
 **Open questions for the owner:** restore `ags-staging` or new Supabase project; Cloudflare Pages vs Vercel Pro; WhatsApp direct (Meta) vs reseller; one branch or several.
 
-**Next:** Pro CRM Phase 1a – app skeleton, Supabase project, login and roles.
+**12 Nov – Phase 1a done (free plan):** `ags-staging` restored; `crm` schema with 28 tables, 70 row-security rules, owner-first-login trigger, 19 departments + 75 services; Next.js CRM 0.1.0 (login, roles, dashboard, departments, staff). Supabase security checker: no CRM findings. Owner must expose the `crm` schema once (SETUP-GUIDE step 0).
+
+**Next:** Phase 1b – Customer 360 (families, consent, masked IDs, documents).

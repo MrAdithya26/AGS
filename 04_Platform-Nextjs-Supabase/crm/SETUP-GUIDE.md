@@ -3,8 +3,13 @@
 Everything below is **free**. Nothing asks for a card.
 
 ## What you already have
-- Database: Supabase project **ags-staging** (Mumbai). The CRM tables are already created in it.
+- Database: Supabase project **ags-staging** (Mumbai). The CRM tables (own `crm` section), security rules, 19 departments and 75 services are already in it.
 - Code: GitHub `MrAdithya26/AGS` › `04_Platform-Nextjs-Supabase/crm/web`.
+
+## 0. Switch on the CRM section of the database (one time, 1 minute)
+1. Open **supabase.com** › sign in › project **ags-staging**.
+2. Left menu **Project Settings** (gear) › **Data API** (or **API**).
+3. Under **Exposed schemas**, add **`crm`** next to `public` › **Save**.
 
 ## 1. Create your owner login (one time, 2 minutes)
 1. Open **supabase.com** › sign in › project **ags-staging**.

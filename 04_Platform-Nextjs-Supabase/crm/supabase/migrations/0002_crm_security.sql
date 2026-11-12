@@ -21,7 +21,6 @@ begin
           not exists (select 1 from staff));
   return new;
 end $$;
-drop trigger if exists crm_on_auth_user_created on auth.users;
 create trigger crm_on_auth_user_created after insert on auth.users for each row execute function crm.handle_new_user();
 revoke execute on function crm.handle_new_user() from anon, authenticated, public;
 

@@ -4,6 +4,8 @@ Newest first. Each decision: date, what was decided, why, and the chat.
 
 | Date | Decision | Why | Chat |
 | --- | --- | --- | --- |
+| 12 Nov 2026 | ₹0 budget: build on free plans (Supabase free, Cloudflare Pages free); paid features built but switched off with free fallbacks (WhatsApp click-to-send, phone links) | Owner has no budget yet | 2026-11-11_ags-services-master-crm |
+| 12 Nov 2026 | Pro CRM uses its own `crm` schema in `ags-staging`, next to the hub's `public` tables | Hub already has a `services` table; keeps both safe, links later via the shared customer | 2026-11-11_ags-services-master-crm |
 | 11 Nov 2026 | Build the pro **AGS Services Master CRM on Next.js + Supabase**, as the staff back-office of the AGS platform, sharing one master customer database. Sheet edition v3.0 is used in the shop until then and its data is imported. | Voice, auto-calls, WhatsApp automation, many secure logins and integrations need a real database | 2026-11-11_ags-services-master-crm |
 | 11 Nov 2026 | **TTD Assistant extension is a separate product** (`13_…`); in the CRM, TTD is one department | Owner's choice; extension has its own releases | 2026-11-11_ags-services-master-crm |
 | 11 Nov 2026 | First integration after the core CRM: **WhatsApp auto messages** (Meta Cloud API); voice, IVR and AI agent follow | Owner wants all; WhatsApp first | 2026-11-11_ags-services-master-crm |
