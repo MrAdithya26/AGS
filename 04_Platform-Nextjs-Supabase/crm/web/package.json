@@ -1,6 +1,6 @@
 {
   "name": "ags-services-master-crm",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "AGS Services Master – pro CRM (staff back-office). Next.js + Supabase.",
   "scripts": {

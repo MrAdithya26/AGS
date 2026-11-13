@@ -2,6 +2,15 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 13 Nov 2026 – Pro CRM Phase 1d: jobs engine (CRM 0.4.0)
+
+Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`
+
+- **New screens:** bookings list (Open / Past expected date / Done / Not done / Cancelled / All, assigned to me, department filter, search by booking no, PNR or application no); new booking for any department (find customer by number or mobile, or add a new one; service with automatic fee and charge; department form fields; devotees / passengers; payment received; assign to staff); booking page (move to any workflow step, details and result fields, assignment, payments, timeline, message for the step in Telugu / English, WhatsApp / SMS).
+- **Free messaging:** the step's message is filled in and opens in the staff member's WhatsApp or SMS app; "I sent it" records it. Automatic sending stays a paid add-on, switched off.
+- **Database (migration 0006, applied):** booking numbers per department prefix and month (TTD-2611-0001, TRV-…, AGS-…, QS-…), first step set automatically, timeline of creation / step / assignment / payment, paid and refunded kept equal to the payments, change log on payments and deleted bookings, shop details setting.
+- **Templates:** the 96 Telugu / English WhatsApp and SMS templates of Sheet edition 3.0 ship inside the app (`web/src/lib/default-templates.json`); the owner loads them once with a button on the Bookings page.
+
 ## 12 Nov 2026 – Pro CRM Phase 1c: departments, services, workflows, form fields (CRM 0.3.0)
 
 Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`

@@ -1,0 +1,607 @@
+{
+ "source": "AGS Services Master Sheet edition 3.0",
+ "names": {
+  "request_received": "Request received (new booking)",
+  "booked": "Booked successfully (darshan / seva)",
+  "booked_room": "Booked successfully (accommodation)",
+  "not_booked_refund_pending": "Not booked - refund will be given",
+  "not_booked_refunded": "Not booked - refund already given",
+  "not_booked_adjusted": "Not booked - amount kept for next try",
+  "dip_registered": "Lucky Dip - registered",
+  "dip_selected": "Lucky Dip - selected (pay now)",
+  "dip_not_selected": "Lucky Dip - not selected",
+  "payment_failed": "Amount debited but ticket not generated",
+  "refund_done": "Refund given",
+  "reminder": "Reminder before the darshan date",
+  "cancelled": "Booking cancelled",
+  "order_received": "Work received (non-TTD services)",
+  "order_completed": "Work completed (non-TTD services)",
+  "travel_received": "Travel - request received",
+  "travel_booked": "Travel - ticket booked",
+  "travel_not_booked": "Travel - ticket not booked",
+  "travel_cancelled": "Travel - ticket cancelled",
+  "travel_reminder": "Travel - journey reminder",
+  "app_applied": "Application submitted",
+  "app_in_process": "Application in process",
+  "app_ready": "Ready to collect",
+  "app_rejected": "Application rejected"
+ },
+ "templates": [
+  {
+   "key": "request_received",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nమీ తిరుమల *{service}* బుకింగ్ అభ్యర్థన మాకు అందింది. ✅\n\n🆔 రిఫరెన్స్ నంబర్: {bookingId}\n📅 కోరిన తేదీ: {preferredDate}\n👥 భక్తుల సంఖ్య: {persons}\n💰 చెల్లించిన మొత్తం: ₹{received}\n\nTTD కోటా విడుదల రోజున ({releaseDate}) మేము మీ కోసం బుకింగ్ ప్రయత్నిస్తాము. ఫలితం వెంటనే తెలియజేస్తాము.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "request_received",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nWe have received your Tirumala *{service}* booking request. ✅\n\n🆔 Reference: {bookingId}\n📅 Preferred date: {preferredDate}\n👥 Devotees: {persons}\n💰 Amount received: ₹{received}\n\nWe will try the booking when TTD releases the quota ({releaseDate}) and inform you immediately.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "request_received",
+   "channel": "sms",
+   "lang": "te",
+   "body": "ఓం నమో వేంకటేశాయ. {name} గారు, మీ {service} అభ్యర్థన అందింది. రెఫ్: {bookingId}, తేదీ: {preferredDate}, చెల్లింపు ₹{received}. ఫలితం తెలియజేస్తాము. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "request_received",
+   "channel": "sms",
+   "lang": "en",
+   "body": "Om Namo Venkatesaya. {name} garu, your {service} request is received. Ref {bookingId}, date {preferredDate}, paid Rs.{received}. We will inform the result. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "booked",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nశుభవార్త! మీ తిరుమల *{service}* బుకింగ్ విజయవంతంగా పూర్తయింది. ✅\n\n🎫 TTD బుకింగ్ నంబర్: *{ttdRef}*\n📅 దర్శనం / సేవ తేదీ: *{serviceDate}*\n⏰ సమయం (స్లాట్): {slot}\n📍 రిపోర్టింగ్ ప్రదేశం: {reportingPoint}\n👥 భక్తులు ({persons}): {devotees}\n💰 టికెట్ మొత్తం: ₹{ticketAmount}\n\n📌 ముఖ్య సూచనలు:\n• బుకింగ్‌లో ఇచ్చిన *ఒరిజినల్ ఫోటో ID (ఆధార్)* తప్పనిసరిగా తీసుకురండి.\n• సాంప్రదాయ దుస్తులు మాత్రమే — పురుషులు: ధోతి / కుర్తా-పైజామా, స్త్రీలు: చీర / చుడీదార్ & దుపట్టా.\n• నిర్ణీత సమయానికి కనీసం 30 నిమిషాల ముందు రిపోర్టింగ్ ప్రదేశానికి చేరుకోండి.\n• టికెట్ ప్రింట్ కాపీ లేదా మొబైల్‌లో టికెట్ వెంట ఉంచుకోండి.\n\nశ్రీవారి కృపాకటాక్షాలు మీ కుటుంబంపై ఉండాలని కోరుకుంటున్నాము. 🙏\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "booked",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nGood news! Your Tirumala *{service}* booking is confirmed. ✅\n\n🎫 TTD booking no: *{ttdRef}*\n📅 Date: *{serviceDate}*\n⏰ Slot: {slot}\n📍 Reporting point: {reportingPoint}\n👥 Devotees ({persons}): {devotees}\n💰 Ticket amount: ₹{ticketAmount}\n\n📌 Please note:\n• Carry the *original photo ID (Aadhaar)* given at booking.\n• Traditional dress only — Men: dhoti / kurta-pyjama, Women: saree / churidar with dupatta.\n• Reach the reporting point at least 30 minutes early.\n• Keep the ticket printout or the ticket on your mobile.\n\nMay Lord Venkateswara bless your family. 🙏\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "booked",
+   "channel": "sms",
+   "lang": "te",
+   "body": "ఓం నమో వేంకటేశాయ. {name} గారు, మీ {service} బుకింగ్ విజయవంతం. టికెట్: {ttdRef}, తేదీ: {serviceDate}, సమయం: {slot}, భక్తులు: {persons}. ఒరిజినల్ ఆధార్, సాంప్రదాయ దుస్తులతో రండి. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "booked",
+   "channel": "sms",
+   "lang": "en",
+   "body": "Om Namo Venkatesaya. {name} garu, your {service} is BOOKED. Ticket {ttdRef}, date {serviceDate}, slot {slot}, persons {persons}. Bring original Aadhaar, traditional dress. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "booked_room",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nమీ *{service}* వసతి (రూమ్) బుకింగ్ విజయవంతంగా పూర్తయింది. ✅\n\n🎫 TTD బుకింగ్ నంబర్: *{ttdRef}*\n🏨 రూమ్ / కాటేజ్: {room}\n📅 చెక్-ఇన్: {checkIn}\n📅 చెక్-అవుట్: {checkOut}\n💰 మొత్తం: ₹{ticketAmount}\n\n📌 చెక్-ఇన్ సమయంలో బుకింగ్‌లో ఇచ్చిన ఒరిజినల్ ఫోటో ID చూపించాలి. కాషన్ డిపాజిట్ రూమ్ ఖాళీ చేసిన తర్వాత TTD తిరిగి చెల్లిస్తుంది.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "booked_room",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nYour *{service}* accommodation is booked. ✅\n\n🎫 TTD booking no: *{ttdRef}*\n🏨 Room / cottage: {room}\n📅 Check-in: {checkIn}\n📅 Check-out: {checkOut}\n💰 Amount: ₹{ticketAmount}\n\n📌 Show the original photo ID used for booking at check-in. TTD refunds the caution deposit after you vacate.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "booked_room",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} రూమ్ బుకింగ్ విజయవంతం. టికెట్: {ttdRef}, చెక్-ఇన్: {checkIn}, రూమ్: {room}. ఒరిజినల్ ఫోటో ID తీసుకురండి. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "booked_room",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} room is BOOKED. Ticket {ttdRef}, check-in {checkIn}, room {room}. Bring original photo ID. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "not_booked_refund_pending",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nక్షమించండి 🙏 TTD కోటా నిమిషాల్లోనే పూర్తవడం వల్ల మీ *{service}* ({preferredDate}) బుకింగ్ ఈసారి లభించలేదు. ❌\n\n🆔 రిఫరెన్స్: {bookingId}\n💰 మీరు చెల్లించిన ₹{refundAmount} త్వరలో (1-2 రోజుల్లో) పూర్తిగా తిరిగి చెల్లిస్తాము.\n\n📅 తదుపరి కోటా విడుదల: {nextRelease}\nమళ్లీ ప్రయత్నించమంటే దయచేసి మాకు తెలియజేయండి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "not_booked_refund_pending",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nSorry 🙏 the TTD quota sold out within minutes, so your *{service}* ({preferredDate}) booking could not be done this time. ❌\n\n🆔 Reference: {bookingId}\n💰 Your ₹{refundAmount} will be refunded in full within 1-2 days.\n\n📅 Next quota release: {nextRelease}\nTell us if you want us to try again.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "not_booked_refund_pending",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, క్షమించండి. కోటా పూర్తవడంతో మీ {service} బుకింగ్ లభించలేదు. ₹{refundAmount} 1-2 రోజుల్లో తిరిగి ఇస్తాము. తదుపరి విడుదల: {nextRelease}. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "not_booked_refund_pending",
+   "channel": "sms",
+   "lang": "en",
+   "body": "Sorry {name} garu, the TTD quota sold out and your {service} could not be booked. Rs.{refundAmount} will be refunded in 1-2 days. Next release {nextRelease}. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "not_booked_refunded",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nక్షమించండి 🙏 TTD కోటా త్వరగా పూర్తవడం వల్ల మీ *{service}* ({preferredDate}) బుకింగ్ లభించలేదు. ❌\n\n✅ మీరు చెల్లించిన ₹{refundAmount} తిరిగి చెల్లించాము.\n💳 విధానం: {refundMode}\n📅 రీఫండ్ తేదీ: {refundDate}\n\n📅 తదుపరి కోటా విడుదల: {nextRelease} — మళ్లీ ప్రయత్నించమంటే తెలియజేయండి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "not_booked_refunded",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nSorry 🙏 the TTD quota sold out, so your *{service}* ({preferredDate}) booking could not be done. ❌\n\n✅ Your ₹{refundAmount} has been refunded.\n💳 Mode: {refundMode}\n📅 Refund date: {refundDate}\n\n📅 Next quota release: {nextRelease} — tell us if you want us to try again.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "not_booked_refunded",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, క్షమించండి. మీ {service} బుకింగ్ లభించలేదు. ₹{refundAmount} రీఫండ్ పూర్తయింది ({refundMode}, {refundDate}). -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "not_booked_refunded",
+   "channel": "sms",
+   "lang": "en",
+   "body": "Sorry {name} garu, your {service} could not be booked. Rs.{refundAmount} refunded ({refundMode}, {refundDate}). -{shopName} {shopPhone}"
+  },
+  {
+   "key": "not_booked_adjusted",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nక్షమించండి 🙏 ఈసారి మీ *{service}* ({preferredDate}) బుకింగ్ లభించలేదు. ❌\n\n💰 మీరు చెల్లించిన ₹{received} మా వద్ద సురక్షితంగా ఉంది. తదుపరి కోటా విడుదల ({nextRelease}) రోజున మీ కోసం మళ్లీ ప్రయత్నిస్తాము. వద్దనుకుంటే ఎప్పుడైనా పూర్తి రీఫండ్ తీసుకోవచ్చు.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "not_booked_adjusted",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nSorry 🙏 your *{service}* ({preferredDate}) booking could not be done this time. ❌\n\n💰 Your ₹{received} is safe with us. We will try again on the next quota release ({nextRelease}). You can take a full refund at any time.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "not_booked_adjusted",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, ఈసారి మీ {service} బుకింగ్ లభించలేదు. మీ ₹{received} మా వద్ద ఉంది, {nextRelease} న మళ్లీ ప్రయత్నిస్తాము. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "not_booked_adjusted",
+   "channel": "sms",
+   "lang": "en",
+   "body": "Sorry {name} garu, your {service} could not be booked this time. Your Rs.{received} is kept; we will try again on {nextRelease}. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "dip_registered",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nమీ *{service}* ఎలక్ట్రానిక్ లక్కీ డిప్ రిజిస్ట్రేషన్ పూర్తయింది. ✅\n\n🆔 రిజిస్ట్రేషన్ నంబర్: {ttdRef}\n📅 కోరిన తేదీ: {preferredDate}\n\nలక్కీ డిప్ ఫలితాలు TTD ప్రకటించగానే మీకు తెలియజేస్తాము. ఎంపికైతే నిర్ణీత గడువులోగా టికెట్ మొత్తం చెల్లించాలి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "dip_registered",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nYour *{service}* electronic lucky dip registration is done. ✅\n\n🆔 Registration no: {ttdRef}\n📅 Preferred date: {preferredDate}\n\nWe will tell you the result as soon as TTD announces it. If selected, the ticket must be paid before the deadline.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "dip_registered",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} లక్కీ డిప్ రిజిస్ట్రేషన్ పూర్తయింది. నం: {ttdRef}. ఫలితం తెలియజేస్తాము. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "dip_registered",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} lucky dip registration is done. No {ttdRef}. We will inform the result. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "dip_selected",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nశుభవార్త! 🎉 మీరు *{service}* లక్కీ డిప్‌లో ఎంపికయ్యారు.\n\n📅 సేవ తేదీ: {serviceDate}\n💰 టికెట్ మొత్తం: ₹{ticketAmount}\n\n⚠️ TTD ఇచ్చిన గడువులోగా చెల్లింపు చేయాలి — లేకపోతే టికెట్ రద్దవుతుంది. దయచేసి వెంటనే మా సెంటర్‌ను సంప్రదించండి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "dip_selected",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nGood news! 🎉 You are selected in the *{service}* lucky dip.\n\n📅 Seva date: {serviceDate}\n💰 Ticket amount: ₹{ticketAmount}\n\n⚠️ Payment must be made before the TTD deadline or the ticket lapses. Please contact our center right away.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "dip_selected",
+   "channel": "sms",
+   "lang": "te",
+   "body": "శుభవార్త! {name} గారు, {service} లక్కీ డిప్‌లో ఎంపికయ్యారు. తేదీ: {serviceDate}, మొత్తం ₹{ticketAmount}. గడువులోగా చెల్లించాలి, వెంటనే సంప్రదించండి. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "dip_selected",
+   "channel": "sms",
+   "lang": "en",
+   "body": "Good news {name} garu! Selected in {service} lucky dip for {serviceDate}. Pay Rs.{ticketAmount} before the TTD deadline - contact us now. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "dip_not_selected",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nఈసారి *{service}* లక్కీ డిప్‌లో మీ పేరు ఎంపిక కాలేదు. 🙏\n\nతదుపరి నెల లక్కీ డిప్ రిజిస్ట్రేషన్ ({nextRelease}) కోసం మళ్లీ నమోదు చేయమంటే తెలియజేయండి. ఇతర దర్శన టికెట్ల కోసం కూడా మేము సహాయం చేస్తాము.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "dip_not_selected",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nYour name was not selected in the *{service}* lucky dip this time. 🙏\n\nTell us if you want to register again for the next lucky dip ({nextRelease}). We can also help with other darshan tickets.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "dip_not_selected",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, ఈసారి {service} లక్కీ డిప్‌లో ఎంపిక కాలేదు. తదుపరి రిజిస్ట్రేషన్: {nextRelease}. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "dip_not_selected",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, not selected in the {service} lucky dip this time. Next registration {nextRelease}. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "payment_failed",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nమీ *{service}* బుకింగ్ సమయంలో చెల్లింపు జరిగినా TTD టికెట్ జారీ కాలేదు. ⚠️\n\nఇలాంటి సందర్భాల్లో TTD సాధారణంగా 7-10 పని దినాల్లో మొత్తాన్ని తిరిగి జమ చేస్తుంది. మేము దీనిని ఫాలో-అప్ చేస్తున్నాము. రీఫండ్ రాగానే మీకు తెలియజేస్తాము.\n\n🆔 రిఫరెన్స్: {bookingId}\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "payment_failed",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nThe payment for your *{service}* booking went through but TTD did not issue the ticket. ⚠️\n\nTTD usually reverses such payments in 7-10 working days. We are following it up and will inform you when the refund arrives.\n\n🆔 Reference: {bookingId}\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "payment_failed",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} చెల్లింపు జరిగినా TTD టికెట్ రాలేదు. TTD 7-10 రోజుల్లో తిరిగి జమ చేస్తుంది, మేము ఫాలో-అప్ చేస్తున్నాము. రెఫ్: {bookingId}. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "payment_failed",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, payment for your {service} went through but TTD did not issue the ticket. TTD reverses it in 7-10 working days; we are following up. Ref {bookingId}. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "refund_done",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 నమస్కారం {name} గారు,\n\n✅ మీ బుకింగ్ ({bookingId}) కు సంబంధించిన ₹{refundAmount} రీఫండ్ పూర్తయింది.\n💳 విధానం: {refundMode}\n📅 తేదీ: {refundDate}\n\nమాపై నమ్మకం ఉంచినందుకు ధన్యవాదాలు. 🙏\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "refund_done",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Namaskaram {name} garu,\n\n✅ The refund of ₹{refundAmount} for booking {bookingId} is done.\n💳 Mode: {refundMode}\n📅 Date: {refundDate}\n\nThank you for trusting us. 🙏\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "refund_done",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, బుకింగ్ {bookingId} కు ₹{refundAmount} రీఫండ్ పూర్తయింది ({refundMode}, {refundDate}). ధన్యవాదాలు. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "refund_done",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, refund of Rs.{refundAmount} for {bookingId} is done ({refundMode}, {refundDate}). Thank you. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "reminder",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 ఓం నమో వేంకటేశాయ 🙏\n\nనమస్కారం {name} గారు,\nగుర్తు చేస్తున్నాము: మీ *{service}* *{serviceDate}* న ఉంది. ⏰ {slot}\n🎫 TTD బుకింగ్ నంబర్: {ttdRef}\n📍 {reportingPoint}\n\n✔ ఒరిజినల్ ఫోటో ID ✔ టికెట్ కాపీ ✔ సాంప్రదాయ దుస్తులు\n\nశుభ యాత్ర! గోవిందా గోవిందా! 🙏\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "reminder",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Om Namo Venkatesaya 🙏\n\nNamaskaram {name} garu,\nReminder: your *{service}* is on *{serviceDate}*. ⏰ {slot}\n🎫 TTD booking no: {ttdRef}\n📍 {reportingPoint}\n\n✔ Original photo ID ✔ Ticket copy ✔ Traditional dress\n\nHappy journey! Govinda Govinda! 🙏\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "reminder",
+   "channel": "sms",
+   "lang": "te",
+   "body": "గుర్తు: {name} గారు, మీ {service} {serviceDate} న, సమయం {slot}. టికెట్ {ttdRef}. ఆధార్, టికెట్, సాంప్రదాయ దుస్తులు మర్చిపోవద్దు. గోవిందా! -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "reminder",
+   "channel": "sms",
+   "lang": "en",
+   "body": "Reminder: {name} garu, your {service} is on {serviceDate}, slot {slot}. Ticket {ttdRef}. Carry Aadhaar, ticket, traditional dress. Govinda! -{shopName} {shopPhone}"
+  },
+  {
+   "key": "cancelled",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "🙏 నమస్కారం {name} గారు,\n\nమీ *{service}* బుకింగ్ అభ్యర్థన ({bookingId}) రద్దు చేయబడింది. చెల్లించిన మొత్తం ఏదైనా ఉంటే తిరిగి చెల్లిస్తాము. ఏవైనా సందేహాలుంటే మమ్మల్ని సంప్రదించండి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "cancelled",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "🙏 Namaskaram {name} garu,\n\nYour *{service}* booking request ({bookingId}) has been cancelled. Any amount paid will be refunded. Contact us for any questions.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "cancelled",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} అభ్యర్థన ({bookingId}) రద్దయింది. చెల్లించిన మొత్తం తిరిగి ఇస్తాము. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "cancelled",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} request ({bookingId}) is cancelled. Any amount paid will be refunded. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "order_received",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు 🙏\n\nమీ *{service}* పని మా వద్ద నమోదైంది.\n🧾 నంబర్: *{bookingId}*\n💰 మొత్తం: ₹{total} · చెల్లించినది: ₹{received}\n\nపని పూర్తవగానే మీకు తెలియజేస్తాము. ఏదైనా సందేహం ఉంటే ఈ నంబర్‌కు కాల్ చేయండి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "order_received",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu 🙏\n\nWe have received your *{service}* request.\n🧾 Number: *{bookingId}*\n💰 Total: ₹{total} · Received: ₹{received}\n\nWe will inform you as soon as it is done. Call us for any doubt.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "order_received",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} పని నమోదైంది. నం. {bookingId}. మొత్తం ₹{total}, చెల్లించినది ₹{received}. పూర్తవగానే తెలియజేస్తాము. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "order_received",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} request is received. No. {bookingId}. Total Rs.{total}, received Rs.{received}. We will inform you when done. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "order_completed",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు 🙏\n\nమీ *{service}* పని పూర్తయింది ✅\n🧾 నంబర్: *{bookingId}*\n💰 మొత్తం: ₹{total} · చెల్లించినది: ₹{received}\n\nమా సేవను ఉపయోగించుకున్నందుకు ధన్యవాదాలు.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "order_completed",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu 🙏\n\nYour *{service}* work is completed ✅\n🧾 Number: *{bookingId}*\n💰 Total: ₹{total} · Received: ₹{received}\n\nThank you for choosing us.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "order_completed",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} పని పూర్తయింది. నం. {bookingId}. ధన్యవాదాలు. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "order_completed",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} work is completed. No. {bookingId}. Thank you. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "travel_received",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు 🙏\n\nమీ *{service}* అభ్యర్థన మా వద్ద నమోదైంది.\n🧾 నంబర్: *{bookingId}*\n🛣️ ప్రయాణం: {route}\n📅 కోరిన తేదీ: {preferredDate}\n👥 ప్రయాణికులు ({persons}): {devotees}\n💰 చెల్లించినది: ₹{received}\n\nటికెట్ బుక్ అవగానే PNR వివరాలు పంపిస్తాము.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_received",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu 🙏\n\nWe have received your *{service}* request.\n🧾 Number: *{bookingId}*\n🛣️ Journey: {route}\n📅 Wanted date: {preferredDate}\n👥 Passengers ({persons}): {devotees}\n💰 Received: ₹{received}\n\nWe will send the PNR details once the ticket is booked.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_received",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} ({route}) అభ్యర్థన నమోదైంది. నం. {bookingId}. బుక్ అవగానే PNR పంపిస్తాము. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "travel_received",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} request ({route}) is received. No. {bookingId}. We will send the PNR once booked. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "travel_booked",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు 🙏\n\nమీ టికెట్ బుక్ అయింది ✅\n\n🎫 PNR / టికెట్: *{ttdRef}*\n🛣️ {route}\n🚆 {operator} {vehicleNo}\n📅 ప్రయాణ తేదీ: *{serviceDate}*  ⏰ {slot}\n📍 బోర్డింగ్: {boardingPoint}\n💺 తరగతి: {travelClass} · సీటు: {seatInfo}\n📌 స్థితి: *{ticketStatus}*\n👥 ప్రయాణికులు ({persons}): {devotees}\n💰 టికెట్ ఛార్జీ: ₹{ticketAmount}\n\n📌 ప్రయాణంలో ఒరిజినల్ ఫోటో ID (ఆధార్), టికెట్ వెంట ఉంచుకోండి. బయలుదేరే సమయానికి కనీసం 30 నిమిషాల ముందే చేరుకోండి.\n\nశుభ ప్రయాణం! 🙏\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_booked",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu 🙏\n\nYour ticket is booked ✅\n\n🎫 PNR / ticket: *{ttdRef}*\n🛣️ {route}\n🚆 {operator} {vehicleNo}\n📅 Journey date: *{serviceDate}*  ⏰ {slot}\n📍 Boarding: {boardingPoint}\n💺 Class: {travelClass} · Seat: {seatInfo}\n📌 Status: *{ticketStatus}*\n👥 Passengers ({persons}): {devotees}\n💰 Fare: ₹{ticketAmount}\n\n📌 Carry the original photo ID (Aadhaar) and the ticket. Reach at least 30 minutes before departure.\n\nHappy journey! 🙏\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_booked",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, టికెట్ బుక్ అయింది. PNR {ttdRef}, {route}, {serviceDate} {slot}, సీటు {seatInfo}, {ticketStatus}. శుభ ప్రయాణం! -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "travel_booked",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, ticket booked. PNR {ttdRef}, {route}, {serviceDate} {slot}, seat {seatInfo}, {ticketStatus}. Happy journey! -{shopName} {shopPhone}"
+  },
+  {
+   "key": "travel_not_booked",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు,\n\nక్షమించండి 🙏 మీ *{service}* ({route}, {preferredDate}) టికెట్ బుక్ కాలేదు.\n💰 మొత్తం: ₹{refundAmount}\n📌 రీఫండ్ స్థితి: {refundStatus}\n\nవేరే తేదీ లేదా వేరే రైలు / బస్సు / ఫ్లైట్ కోసం మమ్మల్ని సంప్రదించండి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_not_booked",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu,\n\nSorry 🙏 your *{service}* ({route}, {preferredDate}) could not be booked.\n💰 Amount: ₹{refundAmount}\n📌 Refund status: {refundStatus}\n\nContact us for another date or another train / bus / flight.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_not_booked",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, క్షమించండి. {service} ({route}) టికెట్ బుక్ కాలేదు. ₹{refundAmount}: {refundStatus}. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "travel_not_booked",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, sorry, {service} ({route}) could not be booked. Rs.{refundAmount}: {refundStatus}. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "travel_cancelled",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు,\n\nమీ టికెట్ (PNR *{ttdRef}*, {route}, {serviceDate}) రద్దు చేయబడింది.\n💰 రీఫండ్: ₹{refundAmount} ({refundStatus})\n\nరైల్వే / ఆపరేటర్ / ఎయిర్‌లైన్ నిబంధనల ప్రకారం రద్దు ఛార్జీలు మినహాయించబడతాయి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_cancelled",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu,\n\nYour ticket (PNR *{ttdRef}*, {route}, {serviceDate}) has been cancelled.\n💰 Refund: ₹{refundAmount} ({refundStatus})\n\nCancellation charges are deducted as per railway / operator / airline rules.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_cancelled",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, PNR {ttdRef} టికెట్ రద్దు అయింది. రీఫండ్ ₹{refundAmount} ({refundStatus}). -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "travel_cancelled",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, ticket PNR {ttdRef} is cancelled. Refund Rs.{refundAmount} ({refundStatus}). -{shopName} {shopPhone}"
+  },
+  {
+   "key": "travel_reminder",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "శుభ ప్రయాణం {name} గారు 🙏\n\nగుర్తు: మీ ప్రయాణం *{serviceDate}* న, ⏰ {slot}.\n🎫 PNR: *{ttdRef}* · 🛣️ {route}\n🚆 {operator} {vehicleNo} · 💺 {seatInfo}\n📍 బోర్డింగ్: {boardingPoint}\n\n✔ ఒరిజినల్ ఫోటో ID ✔ టికెట్ ✔ 30 నిమిషాల ముందే చేరుకోండి\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_reminder",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Happy journey {name} garu 🙏\n\nReminder: your journey is on *{serviceDate}*, ⏰ {slot}.\n🎫 PNR: *{ttdRef}* · 🛣️ {route}\n🚆 {operator} {vehicleNo} · 💺 {seatInfo}\n📍 Boarding: {boardingPoint}\n\n✔ Original photo ID ✔ Ticket ✔ Reach 30 minutes early\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "travel_reminder",
+   "channel": "sms",
+   "lang": "te",
+   "body": "గుర్తు: {name} గారు, మీ ప్రయాణం {serviceDate} {slot}. PNR {ttdRef}, {route}, సీటు {seatInfo}. ఫోటో ID, టికెట్ వెంట ఉంచుకోండి. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "travel_reminder",
+   "channel": "sms",
+   "lang": "en",
+   "body": "Reminder: {name} garu, your journey is on {serviceDate} {slot}. PNR {ttdRef}, {route}, seat {seatInfo}. Carry photo ID and ticket. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "app_applied",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు 🙏\n\nమీ *{service}* దరఖాస్తు సమర్పించబడింది ✅\n📄 దరఖాస్తు నం.: *{ttdRef}*\n🧾 మా నంబర్: {bookingId}\n📅 అంచనా తేదీ: {expectedDate}\n\nస్థితి మారగానే మీకు తెలియజేస్తాము.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "app_applied",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu 🙏\n\nYour *{service}* application is submitted ✅\n📄 Application no: *{ttdRef}*\n🧾 Our number: {bookingId}\n📅 Expected by: {expectedDate}\n\nWe will inform you when the status changes.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "app_applied",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} దరఖాస్తు సమర్పించబడింది. నం. {ttdRef}. అంచనా తేదీ {expectedDate}. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "app_applied",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} application is submitted. No. {ttdRef}. Expected by {expectedDate}. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "app_in_process",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు 🙏\n\nమీ *{service}* దరఖాస్తు (నం. {ttdRef}) ప్రాసెస్‌లో ఉంది ⏳\n📅 అంచనా తేదీ: {expectedDate}\n\nపూర్తవగానే తెలియజేస్తాము.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "app_in_process",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu 🙏\n\nYour *{service}* application (no. {ttdRef}) is in process ⏳\n📅 Expected by: {expectedDate}\n\nWe will inform you as soon as it is done.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "app_in_process",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} దరఖాస్తు ({ttdRef}) ప్రాసెస్‌లో ఉంది. అంచనా {expectedDate}. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "app_in_process",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} application ({ttdRef}) is in process. Expected by {expectedDate}. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "app_ready",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు 🙏\n\nమీ *{service}* సిద్ధంగా ఉంది ✅\n📄 దరఖాస్తు నం.: {ttdRef}\n💰 బాకీ: ₹{balance}\n\n🏪 మా సెంటర్‌కు వచ్చి తీసుకోండి. ఈ మెసేజ్ / రసీదు, మీ ఫోటో ID వెంట తీసుకురండి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "app_ready",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu 🙏\n\nYour *{service}* is ready ✅\n📄 Application no: {ttdRef}\n💰 Balance: ₹{balance}\n\n🏪 Please collect it at our centre. Bring this message / receipt and your photo ID.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "app_ready",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} సిద్ధంగా ఉంది. సెంటర్‌కు వచ్చి తీసుకోండి. బాకీ ₹{balance}. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "app_ready",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} is ready. Please collect at our centre. Balance Rs.{balance}. -{shopName} {shopPhone}"
+  },
+  {
+   "key": "app_rejected",
+   "channel": "whatsapp",
+   "lang": "te",
+   "body": "నమస్కారం {name} గారు,\n\nక్షమించండి 🙏 మీ *{service}* దరఖాస్తు (నం. {ttdRef}) తిరస్కరించబడింది.\n📌 కారణం: {remarks}\n💰 రీఫండ్: ₹{refundAmount} ({refundStatus})\n\nసరైన పత్రాలతో మళ్లీ దరఖాస్తు చేయడానికి మమ్మల్ని సంప్రదించండి.\n\n— {shopNameTe}\n   ({groupNameTe})\n📞 {shopPhone}"
+  },
+  {
+   "key": "app_rejected",
+   "channel": "whatsapp",
+   "lang": "en",
+   "body": "Namaskaram {name} garu,\n\nSorry 🙏 your *{service}* application (no. {ttdRef}) was rejected.\n📌 Reason: {remarks}\n💰 Refund: ₹{refundAmount} ({refundStatus})\n\nContact us to apply again with the right documents.\n\n— {shopName}\n   ({groupName})\n📞 {shopPhone}"
+  },
+  {
+   "key": "app_rejected",
+   "channel": "sms",
+   "lang": "te",
+   "body": "{name} గారు, మీ {service} దరఖాస్తు తిరస్కరించబడింది. కారణం: {remarks}. మమ్మల్ని సంప్రదించండి. -{shopNameTe} {shopPhone}"
+  },
+  {
+   "key": "app_rejected",
+   "channel": "sms",
+   "lang": "en",
+   "body": "{name} garu, your {service} application was rejected. Reason: {remarks}. Please contact us. -{shopName} {shopPhone}"
+  }
+ ]
+}

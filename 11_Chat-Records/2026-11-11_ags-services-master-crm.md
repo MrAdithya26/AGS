@@ -20,4 +20,6 @@
 
 **12 Nov – Phase 1c done (CRM 0.3.0):** department editor with services & prices, workflow steps (118 defaults) and form fields; owner/manager only.
 
-**Next:** Phase 1d – jobs engine (create bookings for any department, move through steps, assign staff, timeline, work queue).
+**13 Nov – Phase 1d done (CRM 0.4.0):** jobs engine – list with filters, new booking for any department, booking page with steps, details, payments, timeline, Telugu/English message opening in WhatsApp/SMS (free). Database self-test passed (numbers, first step, timeline, payment totals) and left no data; message filler tested with a real template.
+
+**Next:** Phase 1e – accounts: receipts with numbers and printing, refunds, daily cash closing per staff, portal wallets.
