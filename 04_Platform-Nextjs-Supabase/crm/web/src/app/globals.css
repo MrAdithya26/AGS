@@ -122,3 +122,13 @@ textarea.msg { background: #E7FFDB; color: #111; font-size: 13px; line-height: 1
 .money tr.tot td { font-weight: 700; color: var(--rk); border-top: 1.5px solid var(--rk); border-bottom: 1.5px solid var(--rk); } .money tr.due td { color: #B42318; font-weight: 700; }
 .rWords { margin-top: 8px; font-size: .85em; font-style: italic; } .rNote { margin-top: 10px; font-size: .8em; color: #4B5563; border: 1px solid var(--rl); border-radius: 6px; padding: 6px 8px; }
 .rSign { display: flex; justify-content: space-between; margin-top: 26px; font-size: .85em; } .rFoot { text-align: center; margin-top: 12px; font-size: .85em; color: var(--rm); }
+/* Phase 1f: dashboard */
+.delta { font-size: 11.5px; font-weight: 600; border-radius: 5px; padding: 1px 6px; margin-right: 4px; background: var(--panel2); }
+.delta.up { color: var(--green); background: var(--greenSoft); } .delta.down { color: var(--red); background: var(--redSoft); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.bars { display: flex; align-items: flex-end; gap: 14px; height: 220px; padding-top: 6px; }
+.barcol { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 3px; }
+.stack { width: 70%; max-width: 46px; display: flex; flex-direction: column-reverse; gap: 2px; min-height: 2px; }
+.stack div { border-radius: 4px 4px 0 0; min-height: 2px; }
+.q { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--line2); color: var(--ink); }
+.q .dot { width: 8px; height: 8px; border-radius: 50%; }

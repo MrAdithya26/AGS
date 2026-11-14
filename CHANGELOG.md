@@ -2,6 +2,16 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 14 Nov 2026 – Pro CRM Phase 1f: dashboard, reports, import, guides (CRM 0.6.0) – Phase 1 complete
+
+Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`
+
+- **Dashboard:** Today / This month / Last month / 3 months with change vs the period before; money received (net), service income, new bookings, completed with success rate, open work, money due; money by service line (last 6 months, stacked bars); work queue (refunds to give, past expected date, money due, ready to collect, next 2 days); by department; staff (created, done, open, collected); "cash not closed today" warning.
+- **Reports:** any date range – by service, daily income; CSV downloads of bookings, receipts & refunds, customers (customers: owner / manager only).
+- **Import from Sheet edition:** Customers and Bookings tabs as CSV; same booking numbers kept, statuses become steps, money and refunds become payments on the original dates, ID numbers checked and encrypted; safe to run twice.
+- **Database (migrations 0008–0009, applied):** dashboard and report summaries (row security still applies), booking numbers skip numbers already taken (imported).
+- **Guides:** `crm/STAFF-GUIDE.md` (daily use) and `crm/SETUP-GUIDE.md` (free hosting now on Netlify, first-time steps).
+
 ## 14 Nov 2026 – Pro CRM Phase 1e: accounts (CRM 0.5.0)
 
 Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`

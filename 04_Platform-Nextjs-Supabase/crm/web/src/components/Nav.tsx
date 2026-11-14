@@ -3,10 +3,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const NAV: (readonly [string, string] | readonly ['sep', string])[] = [
-  ['sep', 'Overview'], ['/', 'Dashboard'],
+  ['sep', 'Overview'], ['/', 'Dashboard'], ['/reports', 'Reports'],
   ['sep', 'Work'], ['/jobs', 'Bookings & jobs'], ['/customers', 'Customers'],
   ['sep', 'Money'], ['/accounts', 'Accounts & cash'], ['/wallets', 'Portal wallets'],
-  ['sep', 'Admin'], ['/departments', 'Departments & services'], ['/staff', 'Staff & roles'],
+  ['sep', 'Admin'], ['/departments', 'Departments & services'], ['/staff', 'Staff & roles'], ['/import', 'Import from Sheet'],
 ];
 export default function Nav() {
   const path = usePathname();

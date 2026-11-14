@@ -10,7 +10,7 @@ Updated: 11 Nov 2026. Older versions are in `99_Archive/`, in `releases/` (zips)
 | WhatsApp single-page site | `03_WhatsApp-Site/index.html` | **1.0.0** | 23 Oct 2026 | Ready; placeholder phone/email must be replaced |
 | AGS Services Master – Sheet edition | `12_Services-Master-Sheet/` (zip in `releases/`) | **3.0.0** | 11 Nov 2026 | Ready, not installed yet |
 | AGS TTD Assistant (Chrome extension) | `13_TTD-Assistant-Extension/` (zip in `releases/`) | **1.5.0** | Nov 2026 | Working; links to Sheet edition |
-| AGS Services Master – pro CRM | `04_Platform-Nextjs-Supabase/crm/` | **0.5.0** | 14 Nov 2026 | Phase 1e done (receipts, day book, cash closing, portal wallets). Not deployed yet |
+| AGS Services Master – pro CRM | `04_Platform-Nextjs-Supabase/crm/` | **0.6.0** | 14 Nov 2026 | Phase 1 complete (dashboard, reports, import, guides). Ready to deploy free; becomes 1.0.0 after the first live test |
 | Next.js + Supabase platform | `04_Platform-Nextjs-Supabase/` | **0.x (in development)** | Sep–Oct 2026 | NO-GO (Phase 2). Code still only in Drive |
 
 ## Documents

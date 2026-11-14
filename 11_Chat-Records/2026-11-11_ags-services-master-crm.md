@@ -24,4 +24,6 @@
 
 **14 Nov – Phase 1e done (CRM 0.5.0):** printable bilingual receipts with R-/RF- numbers (states AGS is not a government service), accounts day book, cash closing per staff, portal wallets with balances and monthly limits. Database self-test passed (receipt numbers, paid/refunded, wallet balance) and left no data.
 
-**Next:** Phase 1f – dashboard and reports, import of Sheet edition data, staff guide; then deploy (free).
+**14 Nov – Phase 1f done (CRM 0.6.0), Phase 1 complete:** dashboard with period comparison and work queue, reports + CSV export, Sheet-edition import (customers, bookings with payments), staff guide, free hosting guide (Netlify). Found and fixed: imported booking numbers could clash with new ones (migration 0009). Database tests passed and left no data.
+
+**Next:** owner does the setup (expose `crm`, owner login, Netlify) and a first live test → 1.0.0. Then Phase 2 – WhatsApp automation (free mode first).
