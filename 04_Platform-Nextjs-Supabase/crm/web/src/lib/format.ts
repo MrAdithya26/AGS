@@ -16,3 +16,20 @@ export const validAadhaar = (n: string) => {
 };
 export const ID_TYPES: [string, string][] = [['aadhaar', 'Aadhaar'], ['pan', 'PAN'], ['voter', 'Voter ID (EPIC)'], ['passport', 'Passport'], ['dl', 'Driving licence'], ['ration', 'Rice / ration card'], ['other', 'Other']];
 export const idLabel = (t: string) => (ID_TYPES.find(x => x[0] === t) || [t, t])[1];
+
+/** Rupees in words, Indian system (lakh, crore). */
+export function inWords(rupees: number): string {
+  let n = Math.round(Math.abs(rupees)); if (!n) return 'Zero';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const t = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = (x: number) => x < 20 ? a[x] : t[Math.floor(x / 10)] + (x % 10 ? ' ' + a[x % 10] : '');
+  const three = (x: number) => (x >= 100 ? a[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' : '') : '') + (x % 100 ? two(x % 100) : '');
+  const out: string[] = [];
+  for (const [v, w] of [[10000000, 'Crore'], [100000, 'Lakh'], [1000, 'Thousand']] as [number, string][]) {
+    if (n >= v) { out.push((v === 10000000 ? inWords(Math.floor(n / v)) : two(Math.floor(n / v))) + ' ' + w); n %= v; }
+  }
+  if (n) out.push(three(n));
+  return out.join(' ');
+}
+/** Today's date in India as YYYY-MM-DD. */
+export const todayIST = () => new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);

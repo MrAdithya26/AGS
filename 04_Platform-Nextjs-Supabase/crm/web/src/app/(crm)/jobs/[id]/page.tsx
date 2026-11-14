@@ -18,7 +18,7 @@ export default async function Job({ params, searchParams }: { params: Promise<{ 
   const [{ data: steps }, { data: events }, { data: pays }, { data: msgs }, { data: team }, { data: shopRow }] = await Promise.all([
     sb.from('workflow_steps').select('key, label, label_te, outcome, template_key, sort').eq('department_id', j.department_id).order('sort'),
     sb.from('job_events').select('id, kind, from_step, to_step, data, actor, at').eq('job_id', id).order('at', { ascending: false }),
-    sb.from('payments').select('id, kind, amount, mode, ref, at').eq('job_id', id).order('at'),
+    sb.from('payments').select('id, kind, amount, mode, ref, at, receipt_no').eq('job_id', id).order('at'),
     sb.from('messages').select('id, channel, template_key, at, handled_by').eq('job_id', id).order('at', { ascending: false }),
     sb.from('staff').select('id, name').order('name'),
     sb.from('settings').select('value').eq('key', 'shop').maybeSingle(),
@@ -97,7 +97,7 @@ export default async function Job({ params, searchParams }: { params: Promise<{ 
 
       <div className="grid2" style={{ marginTop: 16 }}>
         <div className="card"><h3>Payments</h3>
-          {(pays ?? []).length ? <table className="t"><tbody>{(pays ?? []).map(p => <tr key={p.id}><td>{p.kind === 'refund' ? <span className="badge off">Refund</span> : <span className="badge ok">Received</span>}</td><td className="right"><b>{inr(p.amount)}</b></td><td>{p.mode}{p.ref ? ` · ${p.ref}` : ''}</td><td className="small muted">{when(p.at)}</td></tr>)}</tbody></table> : <p className="small muted">No payments yet.</p>}
+          {(pays ?? []).length ? <table className="t"><tbody>{(pays ?? []).map(p => <tr key={p.id}><td>{p.kind === 'refund' ? <span className="badge off">Refund</span> : <span className="badge ok">Received</span>}</td><td className="right"><b>{inr(p.amount)}</b></td><td>{p.mode}{p.ref ? ` · ${p.ref}` : ''}</td><td className="small muted">{when(p.at)}</td><td><Link className="btn sm" href={`/receipt/${p.id}`}>Receipt</Link></td></tr>)}</tbody></table> : <p className="small muted">No payments yet.</p>}
           {can && <form action={addPayment} className="row wrap" style={{ marginTop: 10 }}>
             <input type="hidden" name="id" value={id} /><input type="hidden" name="customer_id" value={j.customers?.id} />
             <select className="i" name="kind" style={{ width: 'auto' }}><option value="receipt">Received</option><option value="refund">Refund given</option></select>
@@ -105,7 +105,7 @@ export default async function Job({ params, searchParams }: { params: Promise<{ 
             <select className="i" name="mode" style={{ width: 'auto' }}><option>Cash</option><option>UPI</option><option>Bank transfer</option><option>Card</option></select>
             <input className="i" name="ref" placeholder="UPI ref (optional)" style={{ width: 160 }} />
             <button className="btn sm primary">Add</button></form>}
-          <p className="small muted" style={{ marginBottom: 0 }}>Receipts, receipt numbers and daily cash closing arrive in Phase 1e.</p>
+          
         </div>
         <div className="card"><h3>Timeline</h3>
           <div className="timeline">{[...(events ?? []).map(e => ({ at: e.at, t: e.kind === 'created' ? `Created at “${label(e.to_step)}”` : e.kind === 'step' ? `${label(e.from_step)} → ${label(e.to_step)}` : e.kind === 'assigned' ? `Assigned to ${who((e.data as any)?.to)}` : e.kind === 'payment' ? `${(e.data as any)?.kind === 'refund' ? 'Refund' : 'Payment'} ${inr((e.data as any)?.amount)} (${(e.data as any)?.mode})` : e.kind, by: e.actor })),

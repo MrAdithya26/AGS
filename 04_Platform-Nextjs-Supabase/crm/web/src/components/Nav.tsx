@@ -4,7 +4,8 @@ import { usePathname } from 'next/navigation';
 
 const NAV: (readonly [string, string] | readonly ['sep', string])[] = [
   ['sep', 'Overview'], ['/', 'Dashboard'],
-  ['sep', 'Work'], ['/customers', 'Customers'], ['/jobs', 'Bookings & jobs'],
+  ['sep', 'Work'], ['/jobs', 'Bookings & jobs'], ['/customers', 'Customers'],
+  ['sep', 'Money'], ['/accounts', 'Accounts & cash'], ['/wallets', 'Portal wallets'],
   ['sep', 'Admin'], ['/departments', 'Departments & services'], ['/staff', 'Staff & roles'],
 ];
 export default function Nav() {

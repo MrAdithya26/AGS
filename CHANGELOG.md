@@ -2,6 +2,15 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 14 Nov 2026 – Pro CRM Phase 1e: accounts (CRM 0.5.0)
+
+Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`
+
+- **Receipts:** printable Telugu + English receipt for every payment and refund (A4 / A5 / 80 mm thermal, or Save as PDF): shop details, receipt no, booking, service, journey / PNR / application no, fee and our charge shown separately, paid now, total paid, balance, amount in words, receipt note, IRCTC agent ID on travel receipts, and the line "AGS is an independent private service, not a government service".
+- **Accounts page:** day book for any date (every receipt and refund with links), totals by payment mode and by staff, **cash closing** per staff (system works out expected cash, staff enter what they counted, difference shown).
+- **Portal wallets page:** IRCTC / TTD / AEPS / recharge accounts (no passwords stored), balance, top-ups, usage linked to bookings, monthly booking limit warning.
+- **Database (migration 0007, applied):** receipt numbers R-2611-0001 and refunds RF-2611-0001, expected-cash function, wallet balance view, change log on cash closings and wallets, receipt wording setting.
+
 ## 13 Nov 2026 – Pro CRM Phase 1d: jobs engine (CRM 0.4.0)
 
 Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`

@@ -22,4 +22,6 @@
 
 **13 Nov – Phase 1d done (CRM 0.4.0):** jobs engine – list with filters, new booking for any department, booking page with steps, details, payments, timeline, Telugu/English message opening in WhatsApp/SMS (free). Database self-test passed (numbers, first step, timeline, payment totals) and left no data; message filler tested with a real template.
 
-**Next:** Phase 1e – accounts: receipts with numbers and printing, refunds, daily cash closing per staff, portal wallets.
+**14 Nov – Phase 1e done (CRM 0.5.0):** printable bilingual receipts with R-/RF- numbers (states AGS is not a government service), accounts day book, cash closing per staff, portal wallets with balances and monthly limits. Database self-test passed (receipt numbers, paid/refunded, wallet balance) and left no data.
+
+**Next:** Phase 1f – dashboard and reports, import of Sheet edition data, staff guide; then deploy (free).
