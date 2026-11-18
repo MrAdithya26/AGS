@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import { createJob } from '../actions';
+import SubmitButton from '@/components/SubmitButton';
 
 type Field = { key: string; label: string; label_te?: string; type: string; stage: string; options?: string[]; required?: boolean };
 type Dept = { id: string; name: string; kind: string; form_fields: Field[] };
@@ -56,7 +57,7 @@ export default function NewJobForm({ depts, services, staff, me, customer, error
         <label className="f">Send updates by<select className="i" name="contact_channel"><option value="whatsapp">WhatsApp</option><option value="sms">SMS</option><option value="call">Phone call</option></select></label>
         <label className="f">Remarks<input className="i" name="remarks" /></label>
       </div>
-      <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end' }}><a className="btn" href="/jobs">Cancel</a><button className="btn primary">Create booking</button></div>
+      <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end' }}><a className="btn" href="/jobs">Cancel</a><SubmitButton busy="Creating…">Create booking</SubmitButton></div>
     </form>
   );
 }

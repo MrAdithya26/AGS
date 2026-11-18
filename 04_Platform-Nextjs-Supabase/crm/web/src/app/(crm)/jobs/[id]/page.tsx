@@ -5,6 +5,7 @@ import { fmtDate, inr } from '@/lib/format';
 import { fillTemplate, waLink } from '@/lib/messages';
 import { FieldInput } from '../new/NewJobForm';
 import { moveStep, saveJobDetails, addPayment, logMessage } from '../actions';
+import SubmitButton from '@/components/SubmitButton';
 
 const OUT: Record<string, string> = { open: 'info', success: 'ok', failed: 'off', cancelled: '' };
 const rs = (p: number | null) => ((p || 0) / 100).toString();
@@ -104,7 +105,7 @@ export default async function Job({ params, searchParams }: { params: Promise<{ 
             <input className="i" name="amount" inputMode="decimal" placeholder="₹" style={{ width: 100 }} defaultValue={bal > 0 ? rs(bal) : ''} />
             <select className="i" name="mode" style={{ width: 'auto' }}><option>Cash</option><option>UPI</option><option>Bank transfer</option><option>Card</option></select>
             <input className="i" name="ref" placeholder="UPI ref (optional)" style={{ width: 160 }} />
-            <button className="btn sm primary">Add</button></form>}
+            <SubmitButton className="btn sm primary" busy="Adding…">Add</SubmitButton></form>}
           
         </div>
         <div className="card"><h3>Timeline</h3>

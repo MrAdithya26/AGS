@@ -1,5 +1,6 @@
 import { saveCustomer } from './actions';
 import { ID_TYPES } from '@/lib/format';
+import SubmitButton from '@/components/SubmitButton';
 
 type C = Record<string, any>;
 export default function CustomerForm({ c, families, error }: { c?: C; families: { id: string; name: string }[]; error?: string }) {
@@ -47,7 +48,7 @@ export default function CustomerForm({ c, families, error }: { c?: C; families: 
       </div>
       <label className="f" style={{ marginTop: 12 }}>Notes<textarea className="i" name="notes" rows={2} defaultValue={v('notes')} /></label>
       {!c?.id && <label className="check" style={{ marginTop: 10 }}><input type="checkbox" name="allow_duplicate" /> Save anyway if the same name and mobile already exist</label>}
-      <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end' }}><a className="btn" href={c?.id ? `/customers/${c.id}` : '/customers'}>Cancel</a><button className="btn primary">Save customer</button></div>
+      <div className="row" style={{ marginTop: 16, justifyContent: 'flex-end' }}><a className="btn" href={c?.id ? `/customers/${c.id}` : '/customers'}>Cancel</a><SubmitButton>Save customer</SubmitButton></div>
     </form>
   );
 }

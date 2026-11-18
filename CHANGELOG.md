@@ -2,6 +2,12 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 18 Nov 2026 – CRM live; 0.6.1 fixes
+
+- **Live:** CRM online (Netlify), owner login, `crm` schema exposed, 96 templates loaded, first bookings and payments made by the owner.
+- **Fix:** Create booking, Add payment, Save customer and Close my day buttons lock while saving (two identical bookings were created by a double click).
+- **Hosting:** `netlify.toml` with the Next.js runtime (fixed "page not found"); `main` now equals the CRM branch; SETUP-GUIDE has steps for running the CRM on the owner's Hostinger **Business Web Hosting** (Node.js Web App) at `crm.agservices.in`.
+
 ## 14 Nov 2026 – Pro CRM Phase 1f: dashboard, reports, import, guides (CRM 0.6.0) – Phase 1 complete
 
 Chat: `11_Chat-Records/2026-11-11_ags-services-master-crm.md`

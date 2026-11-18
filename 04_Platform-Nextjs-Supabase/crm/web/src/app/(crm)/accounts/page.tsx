@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { currentStaff } from '@/lib/supabase/server';
 import { inr, todayIST } from '@/lib/format';
 import { closeCash } from './actions';
+import SubmitButton from '@/components/SubmitButton';
 
 export default async function Accounts({ searchParams }: { searchParams: Promise<{ day?: string; error?: string; saved?: string }> }) {
   const sp = await searchParams; const day = /^\d{4}-\d{2}-\d{2}$/.test(sp.day || '') ? sp.day! : todayIST();
@@ -33,7 +34,7 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
         <div className="card"><h3>My cash closing · {day}</h3>
           <p className="small" style={{ marginTop: 0 }}>By the system you should have <b>{inr(myExp.cash)}</b> in cash, plus {inr(myExp.upi)} by UPI and {inr(myExp.other)} other ({myExp.receipts} entries).</p>
           {myClose ? <p>Closed: counted <b>{inr(myClose.counted)}</b> · difference <b style={{ color: myClose.counted - myClose.expected ? 'var(--red)' : 'var(--green)' }}>{inr(myClose.counted - myClose.expected)}</b>{myClose.note ? ` · ${myClose.note}` : ''}</p>
-            : <form action={closeCash} className="row wrap"><input type="hidden" name="day" value={day} /><label className="f">Cash I counted ₹<input className="i" name="counted" inputMode="decimal" required style={{ width: 140 }} /></label><label className="f">Note<input className="i" name="note" placeholder="e.g. ₹10 short – change" /></label><button className="btn primary" style={{ alignSelf: 'end' }}>Close my day</button></form>}
+            : <form action={closeCash} className="row wrap"><input type="hidden" name="day" value={day} /><label className="f">Cash I counted ₹<input className="i" name="counted" inputMode="decimal" required style={{ width: 140 }} /></label><label className="f">Note<input className="i" name="note" placeholder="e.g. ₹10 short – change" /></label><SubmitButton busy="Closing…">Close my day</SubmitButton></form>}
         </div>
         <div className="card"><h3>By staff</h3>
           <table className="t"><thead><tr><th>Staff</th><th className="right">Net</th><th>Closing</th></tr></thead><tbody>

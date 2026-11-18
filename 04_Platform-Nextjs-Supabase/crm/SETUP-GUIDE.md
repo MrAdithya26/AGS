@@ -33,7 +33,23 @@ Netlify runs this kind of app (Next.js) without extra settings and has a free pl
 
 > If a build fails, copy the last 20 lines of the build log (there are no keys in it) and send them to Claude.
 
-## 3. Keep the free database awake
+## 2B. Or run it on your own Hostinger server (Business Web Hosting, no extra cost)
+Use this instead of Netlify to have everything with Hostinger and the address `crm.agservices.in`.
+1. hPanel › **Domains** (or Websites › agservices.in › Domains) › **Subdomains** › create **`crm`** (gives `crm.agservices.in`).
+2. hPanel › **Websites › Add website › Node.js Web App** (Node.js Apps).
+3. **Import Git repository** › connect GitHub › repository **MrAdithya26/AGS** › branch **main**.
+4. Settings (if Hostinger asks):
+   - Framework: **Next.js** (usually detected)
+   - **Root / application directory:** `04_Platform-Nextjs-Supabase/crm/web`
+   - Node.js version: **22** (or 20)
+   - Build command: `npm run build` · Start command: `npm start`
+5. **Environment variables:** the same two as Netlify (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` = **publishable** key, never the secret key).
+6. Domain: choose **`crm.agservices.in`** › **Deploy**. Wait until it shows running; SSL (https) is added by Hostinger.
+7. Supabase › Authentication › URL Configuration › **Site URL** = `https://crm.agservices.in` › Save.
+8. Open `https://crm.agservices.in`, sign in, check the dashboard. Then you can delete the Netlify project.
+9. **After each update from Claude:** hPanel › your Node.js app › **Redeploy** (or it redeploys by itself if auto-deploy is on).
+
+
 Supabase free projects **pause after 7 days with no use**. Opening the CRM once a week keeps it awake. If it pauses: supabase.com › project › **Restore** (free, takes a few minutes).
 
 ## 4. Daily use
