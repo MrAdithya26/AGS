@@ -20,7 +20,7 @@
   <nav class="tabs" role="tablist">
     <button data-tab="profiles" class="on">Profiles</button>
     <button data-tab="import">Import from Excel</button>
-    <button data-tab="sheet">Google Sheet</button>
+    <button data-tab="sheet">AGS CRM / Sheet</button>
     <button data-tab="schedule">Monthly dates &amp; reminders</button>
     <button data-tab="photo">Photo &amp; panel</button>
     <button data-tab="security">Security</button>
@@ -248,9 +248,26 @@
       </div>
     </section>
 
-    <!-- GOOGLE SHEET (v1.5) -->
+    <!-- AGS CRM (v2.0) + GOOGLE SHEET (v1.5) -->
     <section id="tab-sheet" class="tab">
-      <h2>Google Sheet link (Adithya TTD Master)</h2>
+      <h2>AGS Services Master CRM</h2>
+      <p class="muted">Sign in with <b>your own CRM staff login</b>. The toolbar popup then lists pending TTD bookings from the CRM, ticks their devotees for autofill, and saves the result (Booked / Not booked, ticket no, date, slot) into the CRM with the Telugu WhatsApp message ready. Your password is not stored; only the sign-in session is. Data goes only to your CRM database.</p>
+      <div class="card">
+        <div class="grid2col">
+          <label>CRM database address<input id="crmUrl" placeholder="https://xxxx.supabase.co"></label>
+          <label>Publishable key (never the secret key)<input id="crmKey" placeholder="sb_publishable_…"></label>
+          <label>Your CRM email<input id="crmEmail" type="email" autocomplete="username"></label>
+          <label>Your CRM password<input id="crmPass" type="password" autocomplete="current-password"></label>
+        </div>
+        <p class="muted small">The address and publishable key are the same two values used for the CRM website (Supabase › Project Settings › API).</p>
+        <div class="row wrap">
+          <button id="crmIn" class="btn primary">Sign in</button>
+          <button id="crmOut" class="btn ghost">Sign out</button>
+          <small id="crmMsg"></small>
+        </div>
+      </div>
+      <h2 style="margin-top:24px">Old Google Sheet link (Adithya TTD Master)</h2>
+      <p class="muted small">Only if you still use the Sheet edition. When you are signed in to the CRM above, the CRM is used.</p>
       <p class="muted">Connect the extension to your TTD Master Google Sheet. Then the toolbar popup lists pending bookings, ticks their devotees for autofill, and saves the result (Booked / Not booked, ticket number, date) straight into the sheet, with the Telugu WhatsApp message ready to send. Only this web app URL receives data.</p>
       <div class="card">
         <div class="grid2col">
@@ -309,6 +326,7 @@
   <script src="options.js"></script>
   <script src="import.js"></script>
   <script src="lib/sheet-sync.js"></script>
+  <script src="lib/crm-sync.js"></script>
   <script src="options-sheet.js"></script>
 </body>
 </html>

@@ -144,7 +144,7 @@
     if (!lastMsg) return;
     const url = lastMsg.whatsapp.split('?')[0] + '?text=' + encodeURIComponent($('#msgText').value);
     chrome.tabs.create({ url });
-    if (lastMsg.bookingId) SheetSync.call('messageSent', { bookingId: lastMsg.bookingId, channel: 'WhatsApp' }).catch(() => {});
+    if (lastMsg.bookingId) SheetSync.call('messageSent', { bookingId: lastMsg.bookingId, channel: 'WhatsApp', text: $('#msgText').value }).catch(() => {});
   });
   $('#smsBtn').addEventListener('click', async () => {
     if (!lastMsg) return;

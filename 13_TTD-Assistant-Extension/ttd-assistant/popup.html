@@ -43,8 +43,8 @@
   </section>
 
   <section class="card" id="sheetCard">
-    <div class="row between"><h3>📒 Booking from Google Sheet</h3><small id="sheetInfo" class="muted"></small></div>
-    <div id="sheetOff" hidden><small class="muted">Connect your <b>Adithya TTD Master</b> sheet in <a href="#" id="sheetSetup">Options › Google Sheet</a> to pick pending bookings here and save the result (Booked / Not booked) with one click.</small></div>
+    <div class="row between"><h3>📒 Pending TTD bookings</h3><small id="sheetInfo" class="muted"></small></div>
+    <div id="sheetOff" hidden><small class="muted">Sign in to the <b>AGS CRM</b> in <a href="#" id="sheetSetup">Options › AGS CRM</a> to pick pending TTD bookings here and save the result (Booked / Not booked) with one click.</small></div>
     <div id="sheetOn" hidden>
       <div class="row"><select id="bkSel" class="grow" aria-label="Pending booking"></select><button class="btn" id="bkReload" title="Reload pending bookings">↻</button></div>
       <small id="bkInfo" class="muted bkInfo"></small>
@@ -92,6 +92,7 @@
   </footer>
   <script src="lib/core.js"></script>
   <script src="lib/sheet-sync.js"></script>
+  <script src="lib/crm-sync.js"></script>
   <script src="popup.js"></script>
   <script src="popup-sheet.js"></script>
 </body>

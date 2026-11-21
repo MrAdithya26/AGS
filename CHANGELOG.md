@@ -2,6 +2,12 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 21 Nov 2026 – AGS TTD Assistant 2.0.0 (works with the pro CRM)
+
+- **Extension 2.0.0** (`13_TTD-Assistant-Extension/releases/ags-ttd-assistant-v2.0.0.zip`): sign in with your CRM staff login (password not stored), pending TTD bookings from the CRM, tick devotees for autofill, pull devotees, save Booked / Not booked / Lucky dip / Paid-no-ticket with ticket no, date, slot, amount, TTD login; Telugu / English WhatsApp message filled from the CRM templates; message logged in the booking timeline. Old Google Sheet link still works. Renamed "AGS TTD Assistant".
+- **Database (migration 0010, applied):** `ttd_devotees` gives TTD autofill details including the full photo ID number – only to owner / manager / counter / agent, only customers with an open TTD booking (and family) unless owner/manager asks for all, every pull written to the change log.
+- Simulated-CRM test for the extension connector (`ttd-assistant/test/crm-sync.test.js`).
+
 ## 18 Nov 2026 – CRM live; 0.6.1 fixes
 
 - **Live:** CRM online (Netlify), owner login, `crm` schema exposed, 96 templates loaded, first bookings and payments made by the owner.
