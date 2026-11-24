@@ -4,6 +4,7 @@ Newest first. Each decision: date, what was decided, why, and the chat.
 
 | Date | Decision | Why | Chat |
 | --- | --- | --- | --- |
+| 24 Nov 2026 | **Focus on one tool:** build the complete CRM in Google Sheets + Apps Script first (Sheet edition v4, `12_…`). Pro CRM (Next.js + Supabase, 0.6.1) **on hold**, kept safe for the advanced setup later | Too many parts at once was confusing; add one thing at a time | 2026-11-11_ags-services-master-crm |
 | 12 Nov 2026 | ₹0 budget: build on free plans (Supabase free, Cloudflare Pages free); paid features built but switched off with free fallbacks (WhatsApp click-to-send, phone links) | Owner has no budget yet | 2026-11-11_ags-services-master-crm |
 | 12 Nov 2026 | Pro CRM uses its own `crm` schema in `ags-staging`, next to the hub's `public` tables | Hub already has a `services` table; keeps both safe, links later via the shared customer | 2026-11-11_ags-services-master-crm |
 | 11 Nov 2026 | Build the pro **AGS Services Master CRM on Next.js + Supabase**, as the staff back-office of the AGS platform, sharing one master customer database. Sheet edition v3.0 is used in the shop until then and its data is imported. | Voice, auto-calls, WhatsApp automation, many secure logins and integrations need a real database | 2026-11-11_ags-services-master-crm |

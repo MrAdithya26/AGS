@@ -2,6 +2,11 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 24 Nov 2026 – Focus decision
+
+- Pro CRM 0.6.1 **on hold** (`04_Platform-Nextjs-Supabase/crm/ON-HOLD.md`); everything stays in GitHub, Drive and Supabase.
+- Next: **Sheet edition v4** – complete CRM in Google Sheets + Apps Script, built one part at a time.
+
 ## 21 Nov 2026 – AGS TTD Assistant 2.0.0 (works with the pro CRM)
 
 - **Extension 2.0.0** (`13_TTD-Assistant-Extension/releases/ags-ttd-assistant-v2.0.0.zip`): sign in with your CRM staff login (password not stored), pending TTD bookings from the CRM, tick devotees for autofill, pull devotees, save Booked / Not booked / Lucky dip / Paid-no-ticket with ticket no, date, slot, amount, TTD login; Telugu / English WhatsApp message filled from the CRM templates; message logged in the booking timeline. Old Google Sheet link still works. Renamed "AGS TTD Assistant".

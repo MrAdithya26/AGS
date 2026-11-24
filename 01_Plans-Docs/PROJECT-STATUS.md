@@ -34,6 +34,7 @@ Until you decide, the Go-Live Plan (31 Dec) is treated as the main plan.
 
 | Date | Status |
 | --- | --- |
+| 24 Nov 2026 | Pro CRM 0.6.1 put **on hold** (see `04_…/crm/ON-HOLD.md`). Current focus: **Sheet edition v4** – full CRM in Google Sheets + Apps Script. TTD Assistant 2.0.0 released. |
 | 11 Nov 2026 | Sheet edition 3.0 and TTD Assistant added as products; pro CRM planned on Next.js + Supabase. Supabase `ags-staging` is paused (free plan, unused for a week). |
 | 4 Nov 2026 | All AGS data brought together in 3 places with versioning. Plugin and WhatsApp site code now in GitHub. |
 | 31 Oct 2026 | Go-Live Plan v1.0 written. GitHub repo set up. All 26 planner tasks open. |
