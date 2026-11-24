@@ -2,13 +2,21 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
-## 24 Nov 2026 – Sheet edition 4.0.0, Step 1 of 4 (services, customers, roles)
+## 24 Nov 2026 – Sheet edition 4.0.0, Step 2 of 5 (logins, auto-assign, Google Contacts)
+
+- **Staff logins:** each person has a login ID + password (6+ characters, stored hashed). The Admin sets a default password; the person must choose their own at first login (and after a reset). Login by ID or name. Last login shown. The Admin cannot remove their own Admin role.
+- **Auto-assign:** a new job goes to the least busy active Staff member who works on that department (then Manager, then whoever entered it). "Works on" departments per staff. Manager / Admin can change the person ("change" link on the job). Jobs record who entered them.
+- **New mobile → new customer** automatically when a job is saved.
+- **Google Contacts:** every new customer mobile is saved to the shop's Google Contacts under the label "AGS Customers" (one contact per mobile; free Google People service; asks permission once). Settings has a button to add existing customers. Can be switched off (`contactsSync` = No).
+- Tests: login ID, forced change, short password refused, auto-assign, auto-customer, contacts, Viewer read-only, Manager limits, masked IDs.
+
+## 24 Nov 2026 – Sheet edition 4.0.0, Step 1 of 5 (services, customers, roles)
 
 - **All online services:** 26 departments, about 156 online / CSC services plus TTD (new: Temples, Hotels & Stays, Land & Property, Farmers, Education, PF & Employment, Health; more in Train, Bus, Passport, Certificates, RTO, Tax, Banking, Bill Payments, Counter). No home / third-party services (delivery, plumber, electrician). Existing sheets get the new services once, automatically; nothing you deleted comes back twice.
 - **New "booking" type** for Temples and Hotels & Stays: Booked / Not booked buttons, its own Telugu + English WhatsApp and SMS messages, reminder, receipt labels.
 - **Customer 360:** name in Telugu, message language, WhatsApp / SMS / call consent (date saved), tags, Drive documents-folder link; profile shows total billed, paid and balance due.
 - **Staff roles:** Admin, Manager (can delete and run reminders; cannot change users, settings or API key), Staff, Viewer (view only). Only Admin / Manager receive full ID numbers; others see the last 4 digits.
-- Old 3.0.0 code kept in `99_Archive/12_Services-Master-Sheet/v3.0.0/`. Next: Step 2 (money: receipt numbers, cash closing, portal wallets).
+- Old 3.0.0 code kept in `99_Archive/12_Services-Master-Sheet/v3.0.0/`. 
 
 ## 24 Nov 2026 – Focus decision
 

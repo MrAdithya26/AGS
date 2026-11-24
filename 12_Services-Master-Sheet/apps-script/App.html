@@ -100,11 +100,11 @@ function renderLogin(msg) {
     <h1>AGS Services Master</h1>
     <div class="muted small">Adithya Internet &amp; CSC Center · Adithya Group of Services</div>
     <form id="loginForm">
-      <label class="f"><span>Your name</span><input class="i" name="name" value="${esc(store.get('lastUser') || 'Admin')}" autocomplete="username" required></label>
-      <label class="f"><span>PIN</span><input class="i" name="pin" type="password" inputmode="numeric" autocomplete="current-password" required autofocus></label>
+      <label class="f"><span>Login ID or name</span><input class="i" name="name" value="${esc(store.get('lastUser') || 'Admin')}" autocomplete="username" required></label>
+      <label class="f"><span>Password</span><input class="i" name="pin" type="password" autocomplete="current-password" required autofocus></label>
       <button class="btn primary" style="justify-content:center;padding:11px">Log in</button>
       <div class="small" id="loginMsg" style="color:var(--red);min-height:18px">${esc(msg || '')}</div>
-      <div class="small muted">First time? Name <b>Admin</b>, PIN <b>1234</b> — change it right after logging in.</div>
+      <div class="small muted">First time? Login <b>Admin</b>, password <b>1234</b> — you will be asked to change it.</div>
     </form></div></div>`;
   $('#loginForm').addEventListener('submit', async e => {
     e.preventDefault();
@@ -113,12 +113,31 @@ function renderLogin(msg) {
     btn.disabled = true; btn.textContent = 'Checking…';
     try {
       const r = await call('login', { name: f.name.value.trim(), pin: f.pin.value });
-      S.token = r.token; store.set('token', r.token); store.set('lastUser', r.user.name);
+      S.token = r.token; store.set('token', r.token); store.set('lastUser', f.name.value.trim());
+      if (r.mustChange) return forcePassword(f.pin.value);
       await boot();
     } catch (err) {
       btn.disabled = false; btn.textContent = 'Log in';
       $('#loginMsg').textContent = err.message;
     }
+  });
+}
+// First login with a default password: the person must choose their own before using the app.
+function forcePassword(oldPin) {
+  $('#app').innerHTML = `<div class="loginWrap"><div class="loginCard">
+    <div class="logo">AGS</div><h1>Choose your password</h1>
+    <div class="muted small">This is your first login (or the Admin reset your password). Choose a new password only you know.</div>
+    <form id="pwForm">
+      <label class="f"><span>New password (at least 6 letters / numbers)</span><input class="i" name="newPin" type="password" autocomplete="new-password" minlength="6" required autofocus></label>
+      <label class="f"><span>Type it again</span><input class="i" name="again" type="password" autocomplete="new-password" required></label>
+      <button class="btn primary" style="justify-content:center;padding:11px">Save &amp; continue</button>
+      <div class="small" id="pwMsg" style="color:var(--red);min-height:18px"></div>
+    </form></div></div>`;
+  $('#pwForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    if (f.newPin.value !== f.again.value) return $('#pwMsg').textContent = 'The two passwords are not the same.';
+    try { await call('changePin', { oldPin, newPin: f.newPin.value }); toast('Password saved', 'ok'); await boot(); } catch (err) { $('#pwMsg').textContent = err.message; }
   });
 }
 function logout(expired) { store.set('token', null); S.token = null; S.db = null; renderLogin(expired ? 'Session expired. Please log in again.' : ''); }
@@ -439,7 +458,7 @@ PAGES.dashboard = () => {
   const ptot = Math.max(1, st.total);
   const groups = GROUPS.map(([k, n], i) => { const v = list.filter(b => DI(b).kind === k); return [n, stats(v), seriesColors()[i]]; });
   return `
-  ${S.db.defaultPin ? `<div class="banner">You are still using the default PIN <b>1234</b>. <a href="#" data-act="go" data-page="settings">Change it in Settings</a>.</div>` : ''}
+  ${S.db.defaultPin ? `<div class="banner">You are still using a default password. <a href="#" data-act="go" data-page="settings">Change it in Settings</a>.</div>` : ''}
   <div class="pageHead"><div><h2>Overview</h2><p>${esc(S.db.settings.shopName || 'Adithya Internet & CSC Center')} · ${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
     <div class="seg">${periods.map(p => `<button class="${S.period === p[0] ? 'on' : ''}" data-act="period" data-p="${p[0]}">${p[1]}</button>`).join('')}</div></div>
   <div class="kpis">
@@ -651,7 +670,7 @@ function openBooking(id, opts) {
     </div></div>
     ${b.remarks ? `<div class="dSec"><h4>📝 Remarks</h4><div style="white-space:pre-wrap">${esc(b.remarks)}</div></div>` : ''}
     <div class="dSec"><h4>🕘 History</h4><div class="timeline">${acts.map(a => `<div class="ev"><b>${esc(a.action)}</b> <span class="muted small">· ${esc(a.user)} · ${fDT(a.time)}</span>${a.details ? `<div class="muted small">${esc(a.details)}</div>` : ''}</div>`).join('') || '<div class="muted small">No history yet.</div>'}</div>
-      <div class="muted small" style="margin-top:8px">Handled by ${esc(b.handledBy)} · last updated ${fDT(b.updatedOn)}</div></div>
+      <div class="muted small" style="margin-top:8px">Assigned to <b>${esc(b.handledBy)}</b>${canManage() ? ` <a href="#" data-act="reassign" data-id="${esc(b.bookingId)}">change</a>` : ''}${b.enteredBy && b.enteredBy !== b.handledBy ? ' · entered by ' + esc(b.enteredBy) : ''} · last updated ${fDT(b.updatedOn)}</div></div>
   `, ov => {
     $('#tplSel', ov).addEventListener('change', e => openBooking(id, { key: e.target.value, chan, scrollMsg: true }));
     $('#msgText', ov).addEventListener('input', e => {
@@ -664,6 +683,7 @@ function openBooking(id, opts) {
 
 async function saveBooking(patch, okMsg) {
   const saved = await call('saveBooking', patch);
+  if (saved._newCustomer) { upsertLocal('customers', 'customerId', saved._newCustomer); okMsg = (okMsg || 'Saved') + ' · new customer added'; delete saved._newCustomer; }
   upsertLocal('bookings', 'bookingId', saved);
   pushActivity(saved.bookingId, okMsg || 'Booking saved', '');
   renderNav();
@@ -830,6 +850,7 @@ function bookingForm(id, preset) {
     </div>
     ${fld('Customer name (lead)', inp('customerName', b.customerName, 'required'), 'req')}
     ${fld('Mobile (for WhatsApp)', inp('mobile', b.mobile, 'inputmode="numeric" required pattern="[0-9 +]{10,14}"'), 'req')}
+    ${fld('Assign to', sel('handledBy', [['Auto', '⚙️ Auto (least busy)']].concat(S.db.users.filter(u => u.active !== 'No' && u.role !== 'Viewer').map(u => [u.name, u.name + ' · ' + u.role])), b.handledBy || 'Auto'))}
     ${fld('Send messages by', sel('contactVia', S.db.lists.contactVias || ['WhatsApp', 'SMS', 'WhatsApp + SMS'], b.contactVia || 'WhatsApp'))}
     ${fld('<span id="lblPeople">Devotees</span>', inp('devotees', b.devotees), 'span2')}
     <input type="hidden" name="customerIds" value="${esc(b.customerIds || '')}"><input type="hidden" name="profile" value="${esc(b.profile || '')}">
@@ -1443,11 +1464,13 @@ PAGES.settings = () => {
     ${admin ? smsSettingsHtml(s) : `<p class="muted small" style="margin:0">SMS gateway: <b>${esc(s.smsProvider || 'None')}</b>. Only an Admin can change it.</p>`}</div>
   <div class="card"><h3>⏰ Automatic reminder SMS</h3>
     ${admin ? reminderSettingsHtml(s) : `<p class="muted small" style="margin:0">Automatic reminders: <b>${esc(s.autoReminder || 'Off')}</b>. Only an Admin can change it.</p>`}</div>
-  ${admin ? `<div class="card"><h3>👥 Users &amp; PINs</h3>
-    <div class="tableWrap"><table class="t"><thead><tr><th>Name</th><th>Role</th><th>Active</th><th></th></tr></thead><tbody>${S.db.users.map(u => `<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.role)}</td><td>${esc(u.active)}</td><td class="right"><button class="btn sm" data-act="editUser" data-n="${esc(u.name)}">Edit</button></td></tr>`).join('')}</tbody></table></div>
+  ${canManage() ? `<div class="card"><h3>📇 Google Contacts</h3><p class="muted small" style="margin:0 0 10px">New customers are saved automatically to the shop's Google Contacts (label <b>AGS Customers</b>), one contact per mobile number. Use this once to add the customers you already have.</p>
+    <button class="btn" data-act="syncContacts">📇 Add existing customers to Google Contacts</button></div>` : ''}
+  ${admin ? `<div class="card"><h3>👥 Staff logins</h3>
+    <div class="tableWrap"><table class="t"><thead><tr><th>Name</th><th>Login ID</th><th>Role</th><th>Works on</th><th>Active</th><th>Last login</th><th></th></tr></thead><tbody>${S.db.users.map(u => `<tr><td><b>${esc(u.name)}</b>${u.mustChange === 'Yes' ? ' <span class="badge">must change password</span>' : ''}</td><td>${esc(u.userId || '—')}</td><td>${esc(u.role)}</td><td class="small">${esc(u.departments || 'All')}</td><td>${esc(u.active)}</td><td class="small muted">${esc(u.lastLogin || '—')}</td><td class="right"><button class="btn sm" data-act="editUser" data-n="${esc(u.name)}">Edit</button></td></tr>`).join('')}</tbody></table></div>
     <button class="btn" style="margin-top:10px" data-act="editUser" data-n="">＋ Add staff user</button></div>` : ''}
-  <div class="card"><h3>🔐 My PIN</h3><form id="fPin" class="grid g2">${fld('Current PIN', '<input class="i" name="oldPin" type="password" inputmode="numeric">')}${fld('New PIN (4-8 digits)', '<input class="i" name="newPin" type="password" inputmode="numeric">')}</form>
-    <button class="btn primary" style="margin-top:12px" data-act="changePin">Change PIN</button>
+  <div class="card"><h3>🔐 My password</h3><form id="fPin" class="grid g2">${fld('Current password', '<input class="i" name="oldPin" type="password" autocomplete="current-password">')}${fld('New password (6+ characters)', '<input class="i" name="newPin" type="password" autocomplete="new-password">')}</form>
+    <button class="btn primary" style="margin-top:12px" data-act="changePin">Change password</button>
     <p class="muted small">Your data lives in your Google Sheet (Google Drive). Customer ID numbers are private — share the sheet only with staff you trust.</p></div>
   </div>`;
 };
@@ -1507,14 +1530,20 @@ function reminderModal(r) {
 }
 function editUser(name) {
   const u = name ? S.db.users.find(x => x.name === name) : { role: 'Staff', active: 'Yes' };
-  const m = modal({ title: name ? 'Edit user' : 'Add staff user', size: 'sm', body: `<form id="fUser" class="grid">
-    ${fld('Name', inp('name', u.name, (name ? 'readonly ' : '') + 'required'))}${fld('Role', sel('role', S.db.lists.roles, u.role))}${fld('Active', sel('active', S.db.lists.yesNo, u.active))}
-    ${fld(name ? 'New PIN (leave empty to keep)' : 'PIN (4-8 digits)', '<input class="i" name="pin" type="password" inputmode="numeric">')}</form>`,
+  const mine = String(u.departments || '').split(/\s*,\s*/).filter(Boolean);
+  const m = modal({ title: name ? 'Edit staff login' : 'Add staff login', body: `<form id="fUser" class="grid g2">
+    ${fld('Name', inp('name', u.name, (name ? 'readonly ' : '') + 'required'))}${fld('Login ID (e.g. ravi)', inp('userId', u.userId, 'autocapitalize="off" pattern="[A-Za-z0-9._-]{3,30}"'))}
+    ${fld('Role', sel('role', S.db.lists.roles, u.role))}${fld('Mobile', inp('mobile', u.mobile, 'inputmode="numeric"'))}
+    ${fld('Active', sel('active', S.db.lists.yesNo, u.active))}
+    ${fld(name ? 'Reset password (leave empty to keep)' : 'Default password (6+ characters)', '<input class="i" name="pin" type="text" autocomplete="off"' + (name ? '' : ' required minlength="6"') + '>')}
+    <div class="spanAll"><div class="muted small" style="margin:6px 0">Works on (new jobs are given only to staff who work on that department; tick none = all departments)</div>
+      <div class="row wrap" style="gap:6px">${S.db.depts.map(d => `<label class="small" style="border:1px solid var(--line);border-radius:8px;padding:4px 8px"><input type="checkbox" name="dep" value="${esc(d[0])}" ${mine.includes(d[0]) ? 'checked' : ''}> ${d[1]} ${esc(d[0])}</label>`).join('')}</div></div>
+    <div class="spanAll muted small">Roles: <b>Admin</b> = full control · <b>Manager</b> = all work, money and team, not users or settings · <b>Staff</b> = own jobs, masked ID numbers · <b>Viewer</b> = look only. A new or reset password must be changed by the person at their next login.</div></form>`,
     foot: `${name && name !== S.user.name ? '<button class="btn red" data-del style="margin-right:auto">🗑</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>` });
   m.el.querySelector('[data-x2]').onclick = m.close;
   const del = m.el.querySelector('[data-del]');
   if (del) del.onclick = async () => { try { S.db.users = await call('deleteUser', { name }); m.close(); render(); } catch (e) { fail(e); } };
-  m.el.querySelector('[data-ok]').onclick = async () => { const f = $('#fUser', m.el); if (!f.reportValidity()) return; try { S.db.users = await call('saveUser', formData(f)); m.close(); render(); toast('User saved', 'ok'); } catch (e) { fail(e); } };
+  m.el.querySelector('[data-ok]').onclick = async () => { const f = $('#fUser', m.el); if (!f.reportValidity()) return; const d = formData(f); delete d.dep; d.departments = [...f.querySelectorAll('[name=dep]:checked')].map(x => x.value).join(', '); try { S.db.users = await call('saveUser', d); m.close(); render(); toast('Login saved' + (d.pin ? ' — tell ' + d.name + ' the password; they must change it at first login' : ''), 'ok'); } catch (e) { fail(e); } };
 }
 
 // ================================================================ bulk SMS
@@ -1765,7 +1794,15 @@ const ACT = {
   saveSettings: async () => { try { S.db.settings = await call('saveSettings', formData($('#fSet'))); toast('Settings saved', 'ok'); render(); } catch (e) { fail(e); } },
   newKey: async () => { if (S.db.settings.apiKey && !await confirmBox('Make a new API key? The extension will need the new key.', 'Make new key')) return; try { S.db.settings.apiKey = await call('newApiKey', {}); render(); toast('API key ready — paste it in the extension', 'ok'); } catch (e) { fail(e); } },
   editUser: el => editUser(el.dataset.n),
-  changePin: async () => { try { await call('changePin', formData($('#fPin'))); S.db.defaultPin = false; toast('PIN changed', 'ok'); render(); } catch (e) { fail(e); } },
+  syncContacts: async el => { el.disabled = true; el.textContent = 'Adding…'; try { const n = await call('syncContacts', {}); toast(n + ' customers added to Google Contacts', 'ok'); S.db = await call('bootstrap'); render(); } catch (e) { el.disabled = false; fail(e); } },
+  reassign: async (el, e) => {
+    e.preventDefault();
+    const b = S.db.bookings.find(x => x.bookingId === el.dataset.id);
+    const m = modal({ title: 'Assign ' + esc(b.bookingId), size: 'sm', body: `<form id="fAs" class="grid">${fld('Give this job to', sel('handledBy', S.db.users.filter(u => u.active !== 'No' && u.role !== 'Viewer').map(u => [u.name, u.name + ' · ' + u.role]), b.handledBy))}</form>`, foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>' });
+    m.el.querySelector('[data-x2]').onclick = m.close;
+    m.el.querySelector('[data-ok]').onclick = async () => { try { await saveBooking({ bookingId: b.bookingId, handledBy: $('#fAs', m.el).handledBy.value }, 'Assigned to ' + $('#fAs', m.el).handledBy.value); m.close(); openBooking(b.bookingId); } catch (err) { fail(err); } };
+  },
+  changePin: async () => { try { await call('changePin', formData($('#fPin'))); S.db.defaultPin = false; toast('Password changed', 'ok'); render(); } catch (e) { fail(e); } },
   reloadActivity: async () => { try { S.db.activity = await call('activity', { limit: 500 }); render(); } catch (e) { fail(e); } }
 };
 document.addEventListener('click', e => {

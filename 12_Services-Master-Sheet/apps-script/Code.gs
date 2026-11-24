@@ -8,7 +8,7 @@
  *   - answers the dashboard (api) and the Chrome extension (doPost, with an API key)
  */
 var APP = { name: 'AGS Services Master', version: '4.0.0', tz: 'Asia/Kolkata' };
-var SCHEMA_VERSION = '8';   // bump when columns change: sheets are repaired automatically on next use
+var SCHEMA_VERSION = '9';   // bump when columns change: sheets are repaired automatically on next use
 
 // ------------------------------------------------------------------ dropdown lists
 /** Departments: [name, icon, kind, booking-ID prefix]. kind decides the form: ttd | travel | app (tracked work) | quick (counter sale). */
@@ -114,6 +114,7 @@ var SCHEMA = {
     c('messageVia', 'Message Sent Via', 'text', 110),
     c('reminderSentOn', 'Reminder SMS Sent On', 'datetime', 130),
     c('handledBy', 'Handled By', 'text', 110),
+    c('enteredBy', 'Entered By', 'text', 110),
     c('remarks', 'Remarks', 'text', 220),
     c('createdOn', 'Created On', 'datetime', 130),
     c('updatedOn', 'Updated On', 'datetime', 130)
@@ -145,7 +146,8 @@ var SCHEMA = {
     c('consentCalls', 'Calls OK', 'text', 70, 'yesNo'),
     c('consentDate', 'Consent Date', 'date', 100),
     c('tags', 'Tags', 'text', 140),
-    c('docsLink', 'Documents Folder (Drive link)', 'text', 200)
+    c('docsLink', 'Documents Folder (Drive link)', 'text', 200),
+    c('contactSaved', 'In Google Contacts', 'text', 90, 'yesNo')
   ]},
   Services: { color: '#1E40AF', id: 'serviceId', cols: [
     c('serviceId', 'Service ID', 'text', 90),
@@ -193,8 +195,13 @@ var SCHEMA = {
   Users: { color: '#334155', id: 'name', cols: [
     c('name', 'User Name', 'text', 140),
     c('role', 'Role', 'text', 90, 'roles'),
-    c('pinHash', 'PIN (hashed - set from dashboard)', 'text', 260),
-    c('active', 'Active', 'text', 70, 'yesNo')
+    c('pinHash', 'Password (hashed - set from dashboard)', 'text', 260),
+    c('active', 'Active', 'text', 70, 'yesNo'),
+    c('userId', 'Login ID', 'text', 120),
+    c('mobile', 'Mobile', 'text', 110),
+    c('departments', 'Works On (blank = all)', 'text', 220),
+    c('mustChange', 'Must Change Password', 'text', 90, 'yesNo'),
+    c('lastLogin', 'Last Login', 'datetime', 130)
   ]},
   Settings: { color: '#334155', id: 'key', cols: [
     c('key', 'Setting', 'text', 180),
@@ -212,6 +219,8 @@ var SCHEMA = {
 var SHEET_ORDER = ['Bookings', 'Customers', 'Services', 'Releases', 'TTD Logins', 'Messages', 'Users', 'Settings', 'Activity Log'];
 
 var DEFAULT_SETTINGS = [
+  ['contactsSync', 'Yes', 'Save every new customer mobile to Google Contacts (label "AGS Customers") - Yes / No'],
+  ['autoAssign', 'Yes', 'Give each new job to the least busy staff member of that department - Yes / No'],
   ['shopName', 'Adithya Internet & CSC Center', 'Shop name (English) used in messages'],
   ['shopNameTe', 'ఆదిత్య ఇంటర్నెట్ & CSC సెంటర్', 'Shop name in Telugu used in messages'],
   ['groupName', 'Adithya Group of Services', 'Group name (English)'],
@@ -758,12 +767,20 @@ function api(token, action, payload) {
 }
 
 var READ_ONLY = ['bootstrap', 'activity', 'changePin'];
-var MANAGER_OK = ['deleteBooking', 'deleteCustomer', 'deleteService', 'runReminders'];
-var ADMIN_ONLY = ['deleteBooking', 'deleteCustomer', 'saveUser', 'deleteUser', 'saveSettings', 'newApiKey', 'deleteService', 'testSms', 'runReminders'];
+var MANAGER_OK = ['syncContacts', 'deleteBooking', 'deleteCustomer', 'deleteService', 'runReminders'];
+var ADMIN_ONLY = ['syncContacts', 'deleteBooking', 'deleteCustomer', 'saveUser', 'deleteUser', 'saveSettings', 'newApiKey', 'deleteService', 'testSms', 'runReminders'];
 
 var ACTIONS = {
   bootstrap: function (p, user) { return bootstrap_(user); },
-  saveBooking: function (p, user) { return saveBooking_(p, user); },
+  saveBooking: function (p, user) {
+    var isNew = !p.bookingId, saved = saveBooking_(p, user);
+    if (isNew) {
+      var nc = ensureCustomerFor_(saved, user);
+      if (nc) { addToContacts_(nc); saved = saveBooking_({ bookingId: saved.bookingId, customerIds: saved.customerIds || nc.customerId, profile: saved.profile || nc.profile }, user, 'New customer added'); saved._newCustomer = clean_(findRow_('Customers', 'customerId', nc.customerId).obj); }
+    }
+    return saved;
+  },
+  syncContacts: function (p, user) { return syncContacts_(user); },
   deleteBooking: function (p, user) { deleteRecord_('Bookings', p.bookingId, user); return true; },
   markMessage: function (p, user) { return markSent_(p.bookingId, p.channel || 'WhatsApp', user); },
   sendSms: function (p, user) {
@@ -795,7 +812,11 @@ var ACTIONS = {
     log_(user, 'Settings', 'Test SMS', digits_(p.mobile) + ' · ' + r.response);
     return r;
   },
-  saveCustomer: function (p, user) { return saveCustomer_(p, user); },
+  saveCustomer: function (p, user) {
+    var isNew = !p.customerId, saved = saveCustomer_(p, user);
+    if (isNew && !readAll_('Customers').some(function (c) { return c.customerId !== saved.customerId && c.contactSaved === 'Yes' && digits_(c.mobile).slice(-10) === digits_(saved.mobile).slice(-10); })) addToContacts_(saved);
+    return saved;
+  },
   deleteCustomer: function (p, user) { deleteRecord_('Customers', p.customerId, user); return true; },
   importCustomers: function (p, user) { return importCustomers_(p.rows || [], user); },
   saveService: function (p, user) { return saveSimple_('Services', 'serviceId', 'S', 3, p, user); },
@@ -835,11 +856,14 @@ var ACTIONS = {
   },
   saveUser: function (p, user) {
     if (!p.name) throw new Error('Name is required');
-    var row = { name: p.name, role: p.role || 'Staff', active: p.active || 'Yes' };
+    var row = { name: p.name, role: p.role || 'Staff', active: p.active || 'Yes', userId: String(p.userId || '').trim().toLowerCase(), mobile: digits_(p.mobile || '').slice(-10), departments: p.departments || '' };
+    if (row.userId && readAll_('Users').some(function (u) { return u.name !== p.name && String(u.userId).toLowerCase() === row.userId; })) throw new Error('Login ID ' + row.userId + ' is already used');
+    if (row.role !== 'Admin' && p.name === user.name) row.role = 'Admin';  // the Admin cannot lock themself out
     if (p.pin) {
-      if (!/^\d{4,8}$/.test(p.pin)) throw new Error('PIN must be 4 to 8 digits');
+      checkPassword_(p.pin);
       row.pinHash = hashPin_(p.pin);
-    } else if (!findRow_('Users', 'name', p.name)) throw new Error('Set a PIN for the new user');
+      row.mustChange = 'Yes';  // default password: the person must change it at first login
+    } else if (!findRow_('Users', 'name', p.name)) throw new Error('Set a default password for the new user');
     upsert_('Users', 'name', row);
     log_(user, p.name, 'User saved', row.role);
     return users_();
@@ -851,10 +875,11 @@ var ACTIONS = {
   },
   changePin: function (p, user) {
     var u = findRow_('Users', 'name', user.name);
-    if (!u || u.obj.pinHash !== hashPin_(p.oldPin)) throw new Error('Current PIN is wrong');
-    if (!/^\d{4,8}$/.test(p.newPin)) throw new Error('PIN must be 4 to 8 digits');
-    upsert_('Users', 'name', { name: user.name, pinHash: hashPin_(p.newPin) });
-    log_(user, user.name, 'PIN changed', '');
+    if (!u || u.obj.pinHash !== hashPin_(p.oldPin)) throw new Error('Current password is wrong');
+    checkPassword_(p.newPin);
+    if (p.newPin === p.oldPin) throw new Error('Choose a new password, different from the old one');
+    upsert_('Users', 'name', { name: user.name, pinHash: hashPin_(p.newPin), mustChange: 'No' });
+    log_(user, user.name, 'Password changed', '');
     return true;
   },
   activity: function (p) { return activity_(p.limit || 300); },
@@ -880,7 +905,7 @@ function bootstrap_(user) {
   var me = users.filter(function (u) { return u.name === user.name; })[0] || {};
   return {
     app: APP, user: user, lists: LISTS, depts: DEPARTMENTS,
-    defaultPin: me.pinHash === hashPin_('1234'),
+    defaultPin: me.pinHash === hashPin_('1234') || me.mustChange === 'Yes',
     settings: settings_(user.role === 'Admin'),
     bookings: readAll_('Bookings').map(clean_),
     customers: readAll_('Customers').map(clean_).map(function (c) { return maskCustomer_(c, user); }),
@@ -903,7 +928,8 @@ function settings_(withKey) {
   if (!withKey) SECRET_SETTINGS.forEach(function (k) { o[k] = o[k] ? '••••' : ''; });
   return o;
 }
-function users_() { return readAll_('Users').map(function (u) { return { name: u.name, role: u.role, active: u.active }; }); }
+function users_() { return readAll_('Users').map(function (u) { return { name: u.name, role: u.role, active: u.active, userId: u.userId || '', mobile: u.mobile || '', departments: u.departments || '', mustChange: u.mustChange || 'No', lastLogin: u.lastLogin ? fmt_(u.lastLogin, 'dd MMM yyyy HH:mm') : '' }; }); }
+function checkPassword_(pw) { if (String(pw || '').length < 6) throw new Error('Password must be at least 6 characters'); }
 function activity_(limit) {
   var rows = readAll_('Activity Log').map(clean_);
   return rows.slice(Math.max(0, rows.length - limit)).reverse();
@@ -920,15 +946,16 @@ function hashPin_(pin) {
 function login_(p) {
   if (!readAll_('Users').length) setup();
   var name = String(p.name || '').trim();
-  var row = readAll_('Users').filter(function (u) { return String(u.name).toLowerCase() === name.toLowerCase() && u.active !== 'No'; })[0];
+  var row = readAll_('Users').filter(function (u) { return (String(u.name).toLowerCase() === name.toLowerCase() || (u.userId && String(u.userId).toLowerCase() === name.toLowerCase())) && u.active !== 'No'; })[0];
   // Small delay against PIN guessing.
   Utilities.sleep(400);
-  if (!row || row.pinHash !== hashPin_(p.pin)) throw new Error('Wrong name or PIN');
+  if (!row || row.pinHash !== hashPin_(p.pin)) throw new Error('Wrong login ID or password');
   var token = Utilities.getUuid();
   var user = { name: row.name, role: row.role || 'Staff' };
+  try { upsert_('Users', 'name', { name: row.name, lastLogin: new Date() }); } catch (e) { /* not important */ }
   CacheService.getScriptCache().put('tok_' + token, JSON.stringify(user), 21600);
   log_(user, row.name, 'Logged in', '');
-  return { token: token, user: user };
+  return { token: token, user: user, mustChange: row.mustChange === 'Yes' || row.pinHash === hashPin_('1234') };
 }
 
 function userFromToken_(token) {
@@ -975,7 +1002,8 @@ function saveBooking_(p, user, why) {
       rec.messageStatus = rec.messageStatus || 'Not Sent';
       rec.ttdPayment = rec.ttdPayment || 'Not Paid';
       rec.refundStatus = rec.refundStatus || 'Not Applicable';
-      rec.handledBy = rec.handledBy || user.name;
+      rec.enteredBy = user.name;
+      rec.handledBy = rec.handledBy && rec.handledBy !== 'Auto' ? rec.handledBy : pickStaff_(rec.department, user);
       merged.received = Number(merged.received) || 0;
     }
     if (!rec.paymentStatus && ('received' in rec || !ex)) {
@@ -1018,6 +1046,65 @@ function saveBooking_(p, user, why) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// Least busy active staff member who works on this department (Staff first, then Manager, then whoever entered it).
+var OPEN_STATUSES = ['Requested', 'Attempting', 'Applied', 'In Process', 'Ready to Collect', 'Payment Failed'];
+function pickStaff_(department, user) {
+  if (settings_(true).autoAssign === 'No') return user.name;
+  var users = readAll_('Users').filter(function (u) { return u.active !== 'No' && u.role !== 'Viewer'; });
+  var works = function (u) { var d = String(u.departments || '').trim(); return !d || d.split(/\s*,\s*/).indexOf(department) >= 0; };
+  var pool = users.filter(function (u) { return u.role === 'Staff' && works(u); });
+  if (!pool.length) pool = users.filter(function (u) { return u.role === 'Manager' && works(u); });
+  if (!pool.length) return user.name;
+  var load = {};
+  readAll_('Bookings').forEach(function (b) { if (OPEN_STATUSES.indexOf(b.status) >= 0) load[b.handledBy] = (load[b.handledBy] || 0) + 1; });
+  pool.sort(function (a, b) { return (load[a.name] || 0) - (load[b.name] || 0) || String(a.name).localeCompare(String(b.name)); });
+  return pool[0].name;
+}
+
+// New mobile number on a job → new customer (and Google Contact). Returns the customer or null.
+function ensureCustomerFor_(b, user) {
+  var m = digits_(b.mobile || '').slice(-10);
+  if (m.length !== 10 || !b.customerName) return null;
+  if (readAll_('Customers').some(function (c) { return digits_(c.mobile).slice(-10) === m; })) return null;
+  return saveCustomer_({ name: b.customerName, profile: b.profile || b.customerName, mobile: m, city: b.city || '', notes: 'Added automatically from job ' + b.bookingId }, user);
+}
+
+// Google Contacts (People API, free). Runs as the sheet owner, so contacts go to the owner's Google account.
+function contactGroup_() {
+  var props = PropertiesService.getScriptProperties(), g = props.getProperty('CONTACT_GROUP');
+  if (g) return g;
+  var found = (People.ContactGroups.list({ pageSize: 200 }).contactGroups || []).filter(function (x) { return x.name === 'AGS Customers'; })[0];
+  g = found ? found.resourceName : People.ContactGroups.create({ contactGroup: { name: 'AGS Customers' } }).resourceName;
+  props.setProperty('CONTACT_GROUP', g);
+  return g;
+}
+function addToContacts_(c) {
+  if (typeof People === 'undefined' || settings_(true).contactsSync === 'No') return false;
+  var m = digits_(c.mobile || '').slice(-10);
+  if (m.length !== 10 || c.contactSaved === 'Yes') return false;
+  try {
+    People.People.createContact({
+      names: [{ givenName: String(c.name || '') + ' (AGS)' }],
+      phoneNumbers: [{ value: '+91' + m, type: 'mobile' }],
+      biographies: [{ value: 'AGS customer ' + c.customerId + (c.city ? ' · ' + c.city : ''), contentType: 'TEXT_PLAIN' }],
+      memberships: [{ contactGroupMembership: { contactGroupResourceName: contactGroup_() } }]
+    });
+    upsert_('Customers', 'customerId', { customerId: c.customerId, contactSaved: 'Yes' });
+    return true;
+  } catch (e) { log_({ name: 'System' }, c.customerId, 'Google Contacts failed', String(e.message || e).slice(0, 200)); return false; }
+}
+// One contact per mobile number (family members share one).
+function syncContacts_(user) {
+  var done = {}, n = 0;
+  readAll_('Customers').forEach(function (c) { var m = digits_(c.mobile).slice(-10); if (c.contactSaved === 'Yes') done[m] = 1; });
+  readAll_('Customers').map(clean_).forEach(function (c) {
+    var m = digits_(c.mobile).slice(-10);
+    if (m.length === 10 && !done[m] && n < 200) { if (addToContacts_(c)) n++; done[m] = 1; }
+  });
+  log_(user, 'Customers', 'Google Contacts sync', n + ' added');
+  return n;
 }
 
 function nextBookingId_(now, department) {

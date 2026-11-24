@@ -103,12 +103,40 @@ assert.ok(res.whatsapp.startsWith('https://wa.me/919848012345?text='));
 assert.ok(res.message.includes('KAL998877'));
 
 // roles
-call(token, 'saveUser', { name: 'Staff1', role: 'Staff', pin: '4321' });
-const st = call('', 'login', { name: 'Staff1', pin: '4321' });
+call(token, 'saveUser', { name: 'Staff1', role: 'Staff', pin: '4321ab', userId: 'ravi' });
+assert.strictEqual(api(token, 'saveUser', { name: 'Staff2', role: 'Staff', pin: '12' }).ok, false, 'short password rejected');
+const st = call('', 'login', { name: 'RAVI', pin: '4321ab' });
+assert.strictEqual(st.mustChange, true, 'default password must be changed');
+assert.strictEqual(st.user.name, 'Staff1', 'login by login ID');
+// auto-assign: new job goes to the least busy staff member; a new mobile becomes a customer (+ Google Contact)
+global.People = { ContactGroups: { list: () => ({ contactGroups: [] }), create: () => ({ resourceName: 'contactGroups/ags' }) }, People: { createContact: c => { (global.__contacts = global.__contacts || []).push(c); return {}; } } };
+const before = readAll_('Customers').length;
+const nb2 = call(token, "saveBooking", { department: "Temples", service: "Srisailam darshan / seva booking", customerName: "Test Newman", mobile: "9000022222", serviceCharge: 100 });
+assert.strictEqual(nb2.handledBy, "Staff1", 'auto-assigned to staff');
+assert.strictEqual(nb2.enteredBy, 'Admin');
+assert.strictEqual(readAll_('Customers').length, before + 1, 'new mobile added as customer');
+assert.ok(nb2._newCustomer && nb2.customerIds === nb2._newCustomer.customerId, 'job linked to new customer');
+assert.strictEqual(global.__contacts.length, 1, 'saved to Google Contacts');
+assert.ok(global.__contacts[0].phoneNumbers[0].value === '+919000022222');
+call(token, 'saveBooking', { department: "Temples", service: "Srisailam darshan / seva booking", customerName: 'Test Newman', mobile: '9000022222' });
+assert.strictEqual(readAll_('Customers').length, before + 1, 'known mobile not added twice');
+assert.strictEqual(global.__contacts.length, 1);
+// viewer and manager
+call(token, 'saveUser', { name: 'View1', role: 'Viewer', pin: 'viewer1' });
+const vw = call('', 'login', { name: 'View1', pin: 'viewer1' });
+assert.ok(call(vw.token, 'bootstrap').bookings.length, 'viewer can read');
+assert.match(api(vw.token, 'saveBooking', { department: 'PAN', service: 'x', customerName: 'y' }).error, /only view/);
+assert.ok(call(vw.token, 'bootstrap').customers.every(c => !c.idNumber || c.idNumber.startsWith('••••')), 'viewer sees masked IDs');
+call(token, 'saveUser', { name: 'Mgr', role: 'Manager', pin: 'manager1' });
+const mg = call('', 'login', { name: 'Mgr', pin: 'manager1' });
+assert.strictEqual(api(mg.token, 'saveUser', { name: 'X', pin: 'xxxxxx' }).ok, false, 'manager cannot add users');
+assert.ok(call(mg.token, 'bootstrap').customers.some(c => c.idNumber && !c.idNumber.startsWith('••')), 'manager sees full IDs');
+call(st.token, 'changePin', { oldPin: '4321ab', newPin: 'ravi2026' });
+assert.strictEqual(call('', 'login', { name: 'ravi', pin: 'ravi2026' }).mustChange, false, 'changed password clears the flag');
 assert.strictEqual(api(st.token, 'deleteBooking', { bookingId: b3.bookingId }).ok, false, 'staff cannot delete');
 const sdb = call(st.token, 'bootstrap');
 assert.strictEqual(sdb.settings.apiKey, '••••', 'staff does not see API key');
-call(token, 'changePin', { oldPin: '1234', newPin: '2468' });
+call(token, 'changePin', { oldPin: '1234', newPin: 'admin2468' });
 assert.strictEqual(call(token, 'bootstrap').defaultPin, false);
 
 // ---- SMS
