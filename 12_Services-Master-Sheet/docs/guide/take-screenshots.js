@@ -1,14 +1,15 @@
 const { chromium } = require('playwright');
-const D = '/tmp/claude-0/-home-user/35da55c9-7b16-5d0b-853e-07ee2263549e/scratchpad/shots/';
+const D = __dirname + '/shots/';
 (async () => {
   const b = await chromium.launch(); const errs = [];
   const ctx = await b.newContext({ viewport: { width: 1280, height: 820 }, deviceScaleFactor: 1.5, colorScheme: 'light' });
   const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message));
   await p.route('**/Chart.js/**', r => r.fulfill({ path: '/tmp/claude-0/-home-user/35da55c9-7b16-5d0b-853e-07ee2263549e/scratchpad/cj/package/dist/chart.umd.js', contentType: 'application/javascript' }));
-  await p.goto('file:///home/user/ags/ags-services-master/demo/index.html');
+  await p.goto('file:///home/user/ags/12_Services-Master-Sheet/demo/index.html');
   await p.addStyleTag({ content: '.demoBar, [class*=demo]{display:none!important} body > div:last-child:not(#app):not(#toasts){}' });
   await p.screenshot({ path: D + '00-login.jpg', quality: 82, clip: { x: 390, y: 150, width: 500, height: 520 } });
   await p.fill('input[name=pin]', '1234'); await p.keyboard.press('Enter'); await p.waitForTimeout(1500);
+  if (await p.$('#pwForm')) { await p.fill('[name=newPin]', 'owner2026'); await p.fill('[name=again]', 'owner2026'); await p.click('#pwForm button'); await p.waitForTimeout(2000); }
   await p.evaluate(() => { [...document.querySelectorAll('body *')].filter(e => /DEMO · made-up/.test(e.textContent) && e.children.length === 0).forEach(e => (e.closest('div') || e).remove()); document.querySelector('.banner') && document.querySelector('.banner').remove(); });
   const shot = async (name, full) => { await p.waitForTimeout(350); await p.screenshot({ path: D + name + '.jpg', quality: 82, fullPage: !!full }); };
   await shot('01-dashboard');
@@ -30,9 +31,15 @@ const D = '/tmp/claude-0/-home-user/35da55c9-7b16-5d0b-853e-07ee2263549e/scratch
   await p.click('#nav >> text=Services & prices'); await shot('10-services');
   await p.click('#nav >> text=Settings'); await shot('11-settings');
   await p.click('#nav >> text=Release day board'); await shot('12-board');
+  await p.click('#nav >> text=Dashboard'); await p.click('[data-act=slP][data-p=quarter]'); await p.waitForTimeout(800); await shot('14-dashboard-v4');
+  await p.click('#nav >> text=Finance & P/L'); await p.click('[data-act=slP][data-p=year]'); await p.waitForTimeout(400); await p.click('[data-act=finView][data-v=month]'); await p.waitForTimeout(800); await shot('15-finance');
+  await p.click('[data-act=logout]'); await p.waitForTimeout(600); await p.fill('input[name=name]', 'ravi'); await p.fill('input[name=pin]', 'demo123'); await p.keyboard.press('Enter'); await p.waitForTimeout(1800);
+  await p.evaluate(() => { [...document.querySelectorAll('body *')].filter(e => /DEMO · made-up/.test(e.textContent) && e.children.length === 0).forEach(e => (e.closest('div') || e).remove()); });
+  await shot('16-mywork');
   const m = await b.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 2 }); const mp = await m.newPage();
   await mp.route('**/Chart.js/**', r => r.fulfill({ path: '/tmp/claude-0/-home-user/35da55c9-7b16-5d0b-853e-07ee2263549e/scratchpad/cj/package/dist/chart.umd.js', contentType: 'application/javascript' }));
-  await mp.goto('file:///home/user/ags/ags-services-master/demo/index.html'); await mp.fill('input[name=pin]', '1234'); await mp.keyboard.press('Enter'); await mp.waitForTimeout(1500);
+  await mp.goto('file:///home/user/ags/12_Services-Master-Sheet/demo/index.html'); await mp.fill('input[name=pin]', '1234'); await mp.keyboard.press('Enter'); await mp.waitForTimeout(1500);
+  if (await mp.$('#pwForm')) { await mp.fill('[name=newPin]', 'owner2026'); await mp.fill('[name=again]', 'owner2026'); await mp.click('#pwForm button'); await mp.waitForTimeout(2000); }
   await mp.evaluate(() => { [...document.querySelectorAll('body *')].filter(e => /DEMO · made-up/.test(e.textContent) && e.children.length === 0).forEach(e => (e.closest('div') || e).remove()); const bn = document.querySelector('.banner'); if (bn) bn.remove(); });
   await mp.screenshot({ path: D + '13-mobile.jpg', quality: 82 });
   console.log('errors:', errs); await b.close();

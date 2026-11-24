@@ -43,7 +43,7 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
   </div>
   <div>
     <p><b>Adithya Internet &amp; CSC Center</b> · Adithya Group of Services · Srikakulam</p>
-    <p class="muted">Version 3.0 · November 2026 · Runs free on your own Google account</p>
+    <p class="muted">Version 4.0 · November 2026 · Runs free on your own Google account</p>
     <h3>Contents</h3>
     <ol class="toc">
       <li>Key features</li><li>What you need</li><li>Install step by step (one time, about 20 minutes)</li>
@@ -58,18 +58,18 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
   <h2>1. Key features</h2>
   <p>One system for the whole centre. Every customer, booking, application, sale, payment and message is in one Google Sheet you own, with a dashboard that works on any phone or PC.</p>
   <div class="grid3">
-    <div class="feat"><b>18 departments in one place</b>TTD, Train, Bus, Flight, Aadhaar, PAN, Voter ID, Certificates, Ration &amp; Pension, Govt Schemes, Passport, RTO, Tax &amp; Business, Insurance, Exams &amp; Jobs, Bill Payments, Banking, Counter.</div>
-    <div class="feat"><b>Pro dashboard</b>Money received, service income, new and completed work with change vs last period, monthly chart by service line, work queue, coming-up list.</div>
-    <div class="feat"><b>TTD desk</b>Devotee families, quota release calendar with countdown, release-day board, TTD logins, lucky dip, refunds. Works with your TTD Chrome extension.</div>
-    <div class="feat"><b>Travel</b>Route, train / bus / flight no, class, quota, passengers, PNR, seat, CNF / RAC / WL, journey reminder.</div>
-    <div class="feat"><b>Application tracking</b>Document checklist, application no, expected date, steps Applied → In process → Ready → Delivered, overdue alerts.</div>
-    <div class="feat"><b>Quick sale</b>Bill payments, recharge, AEPS, xerox in one line. Counted in daily income.</div>
-    <div class="feat"><b>Telugu + English messages</b>The right WhatsApp / SMS message for every step is prepared automatically. One click to send.</div>
-    <div class="feat"><b>Automatic reminder SMS</b>Day-before reminders for darshans and journeys through your SMS gateway (optional).</div>
-    <div class="feat"><b>Receipts</b>Bilingual receipt with govt fee and service charge shown separately. A4, A5 or 80 mm thermal, or Save as PDF.</div>
-    <div class="feat"><b>Reports</b>By department, daily income, by service, by staff, by TTD login, refund register, Excel export.</div>
-    <div class="feat"><b>Staff logins</b>Name + PIN for each person, Admin and Staff roles, every change in the Activity log.</div>
-    <div class="feat"><b>Free and private</b>No monthly fee. Data stays in your Google Drive. ID numbers are masked on screen and never printed.</div>
+    <div class="feat"><b>26 departments, 230+ services</b>TTD, temples (Srisailam, Simhachalam, Arasavalli, Annavaram, Durga, Yadadri, Sabarimala, Shirdi), hotels &amp; stays, train, bus, flight, Aadhaar, PAN, voter ID, certificates, land &amp; property, ration &amp; pension, schemes, farmers, education, exams &amp; jobs, PF &amp; employment, passport, RTO, tax &amp; business, insurance, health, banking, bill payments, counter. Online / CSC work only.</div>
+    <div class="feat"><b>Business dashboard with slicers</b>Today, week, month, quarter, financial year, year, all time or any date range; filter by service line, department and staff. Received, refunded, earned, expenses, net profit / loss, refunds pending, failed jobs, open and overdue work, new customers, ▲▼ vs the period before.</div>
+    <div class="feat"><b>Finance &amp; profit / loss</b>Expenses, purchases (printer, computers), investments, other income, owner withdrawals. P&amp;L statement, investment recovered %, daily / weekly / monthly / quarterly / yearly table and chart, Excel download.</div>
+    <div class="feat"><b>Receipts, wallets, cash</b>Every payment gets a receipt number (R-2611-0001), every refund an RF number. Portal wallet balances (IRCTC, AEPS / CSC) with low-balance alerts. Daily cash closing per staff: should have vs counted.</div>
+    <div class="feat"><b>Staff logins &amp; roles</b>Login ID + password for each person; default password must be changed at first login. Admin (full control), Manager, Staff, Viewer.</div>
+    <div class="feat"><b>Auto-assign &amp; My work</b>New jobs go to the least busy staff member of that department. Each staff member sees their tasks, done / failed / pending, what they earned and their cash for the day.</div>
+    <div class="feat"><b>Customer 360</b>Family profile, Telugu name, message language, WhatsApp / SMS / call consent, tags, documents folder link, every job and total billed / paid / balance.</div>
+    <div class="feat"><b>New number = new customer</b>A job with a new mobile number creates the customer and saves the contact in Google Contacts (label "AGS Customers").</div>
+    <div class="feat"><b>TTD, travel, applications</b>Release calendar and board, lucky dip, PNR and seat, document checklist, expected date and overdue alerts. Works with the AGS TTD Chrome extension.</div>
+    <div class="feat"><b>Telugu + English messages</b>The right WhatsApp / SMS message for every step, including temples and hotels. Automatic reminder SMS (optional).</div>
+    <div class="feat"><b>Receipts &amp; reports</b>Bilingual receipt (A4, A5, 80 mm), reports by department, service, staff, TTD login, refund register, Excel export.</div>
+    <div class="feat"><b>Free and private</b>No monthly fee. Data stays in your Google Drive. Full ID numbers only for Admin and Manager; masked for others and never printed.</div>
   </div>
   <div class="fig"><img class="shot" src="shots/01-dashboard.jpg"><div class="cap">Dashboard: key numbers, money by service line, work queue.</div></div>
 </section>
@@ -98,14 +98,24 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
   <h3>C. Run setup once</h3>
   <div class="step"><span class="n">4</span><div>In the toolbar choose the function <b>setup</b> and click <b>▶ Run</b>.</div></div>
   <div class="step"><span class="n">5</span><div>Google asks for permission: choose your account › <b>Advanced</b> › <b>Go to project (unsafe)</b> › <b>Allow</b>. ("Unsafe" only means you wrote the script yourself. Data stays in your account.)</div></div>
-  <div class="step"><span class="n">6</span><div>Go back to the sheet. You now have 9 tabs, about 75 services, release dates and message templates.</div></div>
+  <div class="step"><span class="n">6</span><div>Go back to the sheet. You now have 13 tabs (Bookings, Customers, Payments, Finance, Wallets, Cash Closing, Services …), about 230 services, release dates and message templates.</div></div>
+  <div class="box">Google Contacts: the file <b>appsscript.json</b> switches on Google's free Contacts service. When Google asks for permission it also lists "See, edit … your contacts": allow it, so new customers are saved to your Contacts. If you do not want this, set <b>contactsSync</b> to <b>No</b> in the Settings tab of the sheet.</div>
   <h3>D. Publish the dashboard</h3>
   <div class="step"><span class="n">7</span><div><b>Deploy › New deployment</b> › ⚙ › <b>Web app</b>. <i>Execute as</i>: <b>Me</b>. <i>Who has access</i>: <b>Anyone</b>. Click <b>Deploy</b>.</div></div>
   <div class="step"><span class="n">8</span><div>Copy the <b>Web app URL</b> (ends in <code>/exec</code>). This is your dashboard link. Send it to yourself on WhatsApp.</div></div>
-  <div class="box">"Anyone" only lets people see the login page. Nothing opens without a name and PIN.</div>
+  <div class="box">"Anyone" only lets people see the login page. Nothing opens without a login ID and password.</div>
   <h3>E. First login</h3>
-  <div class="step"><span class="n">9</span><div>Open the link and log in with <b>Admin</b> / <b>1234</b>. Then go to <b>Settings</b> and change the PIN straight away.</div></div>
-  <div class="step"><span class="n">10</span><div>Settings › <b>Shop details</b>: phone, address, receipt notes, IRCTC agent ID, receipt paper size. <b>Users</b>: add each staff member with their own PIN.</div></div>
+  <div class="step"><span class="n">9</span><div>Open the link and log in with <b>Admin</b> / <b>1234</b>. You are asked to choose your own password at once (6 or more letters / numbers).</div></div>
+  <div class="step"><span class="n">10</span><div>Settings › <b>Shop details</b>: phone, address, receipt notes, IRCTC agent ID, receipt paper size. <b>Staff logins</b>: ＋ Add staff login › name, login ID (e.g. <code>ravi</code>), role, mobile, a default password and the departments they work on. Tell them the password; they must change it at their first login.</div></div>
+  <h3>F. Staff roles</h3>
+  <table><tr><th></th><th>Admin (owner)</th><th>Manager</th><th>Staff</th><th>Viewer</th></tr>
+    <tr><td>Dashboard, Finance &amp; P/L, reports</td><td>✔ all</td><td>✔ all</td><td>— (My work only)</td><td>✔ view</td></tr>
+    <tr><td>Enter jobs, payments, messages</td><td>✔</td><td>✔</td><td>✔</td><td>—</td></tr>
+    <tr><td>Assign / re-assign jobs</td><td>✔</td><td>✔</td><td>auto only</td><td>—</td></tr>
+    <tr><td>Expenses</td><td>✔ all types</td><td>✔ all types</td><td>own expenses</td><td>—</td></tr>
+    <tr><td>Delete jobs, customers, entries; wallets</td><td>✔</td><td>✔</td><td>—</td><td>—</td></tr>
+    <tr><td>Full Aadhaar / ID numbers</td><td>✔</td><td>✔</td><td>last 4 digits</td><td>last 4 digits</td></tr>
+    <tr><td>Staff logins, settings, API key</td><td>✔</td><td>—</td><td>—</td><td>—</td></tr></table>
 </section>
 
 <section>
@@ -116,7 +126,7 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
       <li><b>Android:</b> open the link in Chrome › ⋮ › <b>Add to Home screen</b>. It opens like an app.</li>
       <li><b>iPhone:</b> Safari › Share › <b>Add to Home Screen</b>.</li>
       <li><b>PC:</b> open the link and bookmark it (<span class="k">Ctrl+D</span>).</li>
-      <li>Each person logs in with their own name and PIN. The login lasts 6 hours.</li>
+      <li>Each person logs in with their own login ID and password. The login lasts 6 hours.</li>
     </ul></div>
     <div><img class="shot" style="width:55%;margin:0 auto" src="shots/13-mobile.jpg"></div>
   </div>
@@ -142,7 +152,8 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
   <h3>New booking or application</h3>
   <ol>
     <li>Click <b>New booking</b> (top right) and choose the <b>Department</b> first. The form changes to fit it.</li>
-    <li>Search the customer's family, or type name and mobile for a walk-in. Pick the <b>service</b>: price and service charge fill in.</li>
+    <li>Search the customer's family, or type name and mobile for a walk-in (a <b>new mobile number becomes a new customer</b> and is saved in Google Contacts). Pick the <b>service</b>: price and service charge fill in.</li>
+    <li><b>Assign to</b> stays on <i>Auto</i> (least busy staff member of that department), or choose a person. If the fee is paid from a portal wallet, choose the wallet.</li>
     <li>For applications, tick the <b>documents received</b>. For travel, fill route, class and passengers.</li>
     <li>Enter the amount received and click <b>Create booking</b>. The "received" message opens ready to send.</li>
   </ol>
@@ -152,12 +163,31 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
     <tr><td>TTD</td><td>Attempting · Booked · Not booked · Lucky dip · Paid, no ticket</td><td>Booked details or refund message</td></tr>
     <tr><td>Train / bus / flight</td><td>Booked (PNR, seat, CNF/WL) · Not booked · Cancel</td><td>Ticket details, journey reminder</td></tr>
     <tr><td>Applications</td><td>Applied · In process · Ready · Delivered · Rejected</td><td>Application no, expected date, "ready to collect"</td></tr>
+    <tr><td>Temples &amp; hotels</td><td>Attempting · Booked (ticket / booking no, date, slot) · Not booked</td><td>Booking details, reminder, refund message</td></tr>
     <tr><td>Counter work</td><td>Completed</td><td>"Work completed" (optional)</td></tr></table>
   <p>After each step the right Telugu or English message is ready. Click <b>Send on WhatsApp</b> (or SMS), then it is marked as sent.</p>
   <div class="fig"><img class="shot" src="shots/05-application.jpg"><div class="cap">Application ready to collect: one click sends the Telugu message.</div></div>
 </section>
 
 <section>
+  <h3>Business dashboard (Admin, Manager)</h3>
+  <p>Choose the period at the top (<b>Today, This week, This month, This quarter, Financial year, This year, All time</b> or <b>Custom</b> dates) and, if you want, one service line, department or staff member. Every number, chart and table follows your choice. ▲▼ compares with the same number of days before. Click a staff name to see only their work; click a KPI to open the matching jobs.</p>
+  <div class="fig"><img class="shot" src="shots/14-dashboard-v4.jpg"><div class="cap">Money and work KPIs, earned vs costs with profit line, work queue, staff performance, failed jobs and refunds.</div></div>
+  <h3>Finance &amp; profit / loss</h3>
+  <ul>
+    <li><b>Expenses &amp; investments</b>: add rent, electricity, internet, salaries, paper and ink (<i>Expense</i>); a new printer or computer (<i>Purchase</i>); money you put into the business (<i>Investment</i>); commission or other earnings (<i>Other income</i>); money you take out (<i>Owner withdrawal</i>); money added to a portal wallet (<i>Wallet top-up</i>). Paste a Drive link to the bill photo if you like.</li>
+    <li><b>Profit &amp; loss</b>: income (your service charges on finished work + other income) minus costs (expenses + purchases) = <b>net profit or loss</b>. Govt / ticket fees are passed on, so they are not income. Choose Daily / Weekly / Monthly / Quarterly / Yearly and download Excel. "Investment recovered" shows how much of your investment the business has earned back.</li>
+    <li><b>Receipts</b>: every amount received gets a receipt number (R-yyMM-0001), every refund an RF number, with payment mode and who collected it.</li>
+    <li><b>Wallets</b>: add IRCTC agent, AEPS / CSC or other portal balances; the balance goes down by the ticket / govt fee of each job paid from it, up with each top-up, and turns red below your alert amount.</li>
+    <li><b>Cash closing</b>: at the end of the day each person clicks <b>Close cash</b> and types the cash in hand. The system shows whether it matches what they should have (cash received − cash refunds − cash expenses).</li>
+  </ul>
+  <div class="fig"><img class="shot" src="shots/15-finance.jpg"><div class="cap">Profit &amp; loss statement, investment recovered, period-by-period table.</div></div>
+</section>
+
+<section>
+  <h3>My work (every staff member)</h3>
+  <p>Staff open on <b>My work</b>: their open tasks (late ones in red), done, failed and pending counts, what they earned for AGS, and today's cash with a <b>Close my cash</b> button. Staff can add their own expenses (e.g. tea, courier) but cannot see the shop's profit.</p>
+  <div class="fig"><img class="shot" src="shots/16-mywork.jpg"><div class="cap">A staff member's home page.</div></div>
   <h3>Quick sale (bills, recharge, AEPS, xerox)</h3>
   <p>Click <b>Quick sale</b> at the top, pick the service, enter the amount and payment mode, save. Tick "Print receipt" if the customer wants one.</p>
   <div class="fig"><img class="shot" src="shots/03-quick-sale.jpg"><div class="cap">Quick sale: one line, counted in today's income.</div></div>
@@ -189,7 +219,7 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
   <div class="fig"><img class="shot" src="shots/10-services.jpg"></div>
   <h2 style="margin-top:12px">7. Before you go live: checklist</h2>
   <ul class="check">
-    <li>Admin PIN changed from 1234. Each staff member has their own login.</li>
+    <li>Admin password changed from 1234. Each staff member has their own login ID and has changed their default password.</li>
     <li>Shop details filled: phone, address, receipt notes, IRCTC agent ID, paper size.</li>
     <li><b>Services &amp; prices:</b> real fee, service charge, documents and days set for every service you offer. Services you don't offer set to Active = No. (The starter values are only samples.)</li>
     <li>Release calendar: this month's TTD dates checked against the TTD announcement.</li>
@@ -210,9 +240,9 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
     <li>Export to Excel from Bookings or Reports once a month.</li>
     <li>Every release of this system is kept in Google Drive › ABD Innovations › Adithya Group of Services › AGS Services Master (CRM), with full git history.</li></ul>
   <h3>Data safety</h3>
-  <ul><li>The sheet holds customers' Aadhaar numbers. Never share the sheet itself. Staff use only the dashboard link and their own PIN.</li>
+  <ul><li>The sheet holds customers' Aadhaar numbers. Never share the sheet itself. Staff use only the dashboard link and their own password.</li>
     <li>ID numbers are masked on screen and never printed on receipts.</li>
-    <li>Never send the API key, SMS password or PINs on WhatsApp.</li>
+    <li>Never send the API key, SMS password or passwords on WhatsApp.</li>
     <li>Book train tickets only on your authorised IRCTC agent ID. The system records bookings; it does not log in to or fill IRCTC, bus, airline or government sites.</li></ul>
   <h2 style="margin-top:14px">9. Troubleshooting</h2>
   <table><tr><th>Problem</th><th>What to do</th></tr>
@@ -234,7 +264,7 @@ th, td { border: 1px solid #E3E8EF; padding: 6px 8px; vertical-align: top; }
     <li><b>Extensions › Apps Script</b> తెరిచి <b>1-Install</b> ఫోల్డర్‌లోని 5 ఫైళ్లను పై పట్టికలో చెప్పినట్టు పేస్ట్ చేయండి. Ctrl+S నొక్కండి.</li>
     <li><b>setup</b> ఎంచుకుని ▶ Run నొక్కండి → Allow చేయండి.</li>
     <li><b>Deploy › New deployment › Web app</b> (Me / Anyone) → వచ్చిన లింక్ మీ డాష్‌బోర్డ్.</li>
-    <li><b>Admin / 1234</b> తో లాగిన్ అయి వెంటనే PIN మార్చండి. ప్రతి స్టాఫ్‌కు వేరే లాగిన్ ఇవ్వండి.</li>
+    <li><b>Admin / 1234</b> తో లాగిన్ అయి వెంటనే కొత్త పాస్‌వర్డ్ పెట్టుకోండి. ప్రతి స్టాఫ్‌కు వేరే లాగిన్ ఇవ్వండి.</li>
     <li>ప్రతి ఫోన్‌లో లింక్ తెరిచి <b>Add to Home screen</b> చేయండి. ఏమీ ఇన్‌స్టాల్ చేయనవసరం లేదు.</li>
   </ol>
   <h3>రోజువారీ వాడకం</h3>

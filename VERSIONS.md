@@ -8,7 +8,7 @@ Updated: 11 Nov 2026. Older versions are in `99_Archive/`, in `releases/` (zips)
 | --- | --- | --- | --- | --- |
 | AGS Core WordPress plugin | `02_Website-WordPress/ags-core/` (zip in `releases/`) | **1.0.0** | 27 Oct 2026 | Ready, not installed yet |
 | WhatsApp single-page site | `03_WhatsApp-Site/index.html` | **1.0.0** | 23 Oct 2026 | Ready; placeholder phone/email must be replaced |
-| AGS Services Master – Sheet edition | `12_Services-Master-Sheet/` (zip in `releases/`) | **4.0.0 (Step 2 of 5)** | 24 Nov 2026 | Being upgraded; 3.0.0 zip still in `releases/` |
+| AGS Services Master – Sheet edition | `12_Services-Master-Sheet/` (zip in `releases/`) | **4.0.0** | 24 Nov 2026 | Released (zip in `releases/`); not installed yet |
 | AGS TTD Assistant (Chrome extension) | `13_TTD-Assistant-Extension/` (zip in `releases/`) | **2.0.0** | 21 Nov 2026 | Links to the pro CRM (and still to the Sheet edition) |
 | AGS Services Master – pro CRM | `04_Platform-Nextjs-Supabase/crm/` | **0.6.1** | 18 Nov 2026 | Live on Netlify; owner testing. Hostinger (crm.agservices.in) next; becomes 1.0.0 after the full live test |
 | Next.js + Supabase platform | `04_Platform-Nextjs-Supabase/` | **0.x (in development)** | Sep–Oct 2026 | NO-GO (Phase 2). Code still only in Drive |

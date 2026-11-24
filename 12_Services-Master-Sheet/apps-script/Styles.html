@@ -277,4 +277,12 @@ table.t td b { font-weight: 600; }
   #printArea .rcpt tr { break-inside: avoid; }
   #printArea[data-size="80mm"] .rcpt { max-width: none; padding: 0; }
 }
+/* v4: slicers, KPI colours, finance */
+.slicers { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; margin-bottom: 14px; }
+.slicers .seg { flex-wrap: wrap; }
+.i.sm { padding: 6px 8px; font-size: 13px; width: auto; min-width: 0; }
+.kpiHead { font-size: 13px; font-weight: 650; color: var(--ink2); margin: 14px 0 8px; display: flex; gap: 10px; align-items: baseline; }
+.kpi.pos .val { color: var(--green); }
+.kpi.neg .val { color: var(--red); }
+@media (max-width: 700px) { .slicers .seg button { padding: 6px 8px; font-size: 12px; } .slicers select { flex: 1 1 45%; } }
 </style>

@@ -2,6 +2,18 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 24 Nov 2026 – AGS Services Master 4.0.0 released (Sheet edition, Steps 3–5)
+
+- **Money:** every payment gets a receipt number (R-yyMM-0001), every refund an RF number, in a new **Payments** tab (mode, staff). Receipt shows the receipt number.
+- **Finance (new tab):** Expense, Purchase, Investment, Other income, Owner withdrawal, Wallet top-up, with categories (rent, electricity, salaries, paper & ink, equipment …), bill link. Staff can add only their own expenses.
+- **Profit & loss:** income (service charges on finished work + other income) − costs (expenses + purchases); investment recovered %; daily / weekly / monthly / quarterly / yearly table + chart; Excel download of P&L and receipts.
+- **Wallets:** IRCTC / AEPS / CSC balances (opening + top-ups − fees of jobs paid from the wallet), low-balance alert in the work queue.
+- **Cash closing (new tab):** per staff per day – cash in, cash out, should have, counted, difference.
+- **Business dashboard:** slicers (Today, Week, Month, Quarter, Financial year, Year, All, Custom range; service line; department; staff), money KPIs (received, refunded, earned, costs, net profit / loss, refunds pending), work KPIs (jobs, completed, failed + amount, open, overdue, new customers), ▲▼ vs previous period, earned-vs-costs chart with profit line, earned by department, failed jobs & refunds, staff performance, top services, payment modes, by department.
+- **My work (Staff home):** own open tasks (late in red), done / failed / pending, earned for AGS, cash today, close my cash, add expense. Menus follow the role (Staff do not see dashboard, finance or reports).
+- **Guide PDF v4** (15 pages, new screenshots, roles table, finance and dashboard how-to, upgrade note); release zip `12_Services-Master-Sheet/releases/AGS-Services-Master-v4.0.0.zip` (includes TTD Assistant 2.0.0).
+- Tests: receipts / refunds / corrections, finance rules, cash closing, staff-only data. TTD extension tests pass.
+
 ## 24 Nov 2026 – Sheet edition 4.0.0, Step 2 of 5 (logins, auto-assign, Google Contacts)
 
 - **Staff logins:** each person has a login ID + password (6+ characters, stored hashed). The Admin sets a default password; the person must choose their own at first login (and after a reset). Login by ID or name. Last login shown. The Admin cannot remove their own Admin role.

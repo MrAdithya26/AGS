@@ -46,13 +46,13 @@ const PENDING = ['Requested', 'Attempting', 'Lucky Dip - Registered', 'Applied',
 const APP_OPEN = ['Requested', 'Applied', 'In Process'];
 const overdue = (b, t) => DI(b).kind === 'app' && APP_OPEN.includes(b.status) && b.expectedDate && b.expectedDate < t;
 const CAT_ICON = { 'Darshan': '🛕', 'Arjitha Seva': '🪔', 'Angapradakshinam': '🙇', 'Homam': '🔥', 'Accommodation': '🏨', 'Virtual Seva': '📺', 'Donation': '💝', 'Other': '📿' };
-const SERIES = { light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'], dark: ['#3987e5', '#d95926', '#199e70', '#c98500'] };
-const GROUPS = [['ttd', 'TTD'], ['travel', 'Travel'], ['app', 'Applications'], ['quick', 'Counter & bills']];
+const SERIES = { light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#8a5cd1'], dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#9d72e0'] };
+const GROUPS = [['ttd', 'TTD'], ['travel', 'Travel'], ['booking', 'Temples & stays'], ['app', 'Applications'], ['quick', 'Counter & bills']];
 const COLORS = { booked: '#0F9D6B', failed: '#D33A3A', pending: '#EA7A12', other: '#94A3B8', maroon: '#7B1E1E', gold: '#D9A520', blue: '#2F6FDB', violet: '#7C4DDB' };
 const CAT_COLORS = ['#7B1E1E', '#EA7A12', '#D9A520', '#0F9D6B', '#2F6FDB', '#7C4DDB', '#D2447F', '#64748B'];
 
 // ================================================================ state & server
-const S = { token: store.get('token'), user: null, db: null, page: 'dashboard', period: 'month', charts: [], lang: 'Telugu',
+const S = { token: store.get('token'), user: null, db: null, page: 'dashboard', period: 'month', sl: { p: 'month', from: '', to: '', dept: '', staff: '', line: '' }, finTab: 'pl', finView: '', charts: [], lang: 'Telugu',
   bf: { q: '', status: '', cat: '', month: '', login: '', when: 'request' }, prof: null, custQ: '', msgKey: 'booked', relMonth: ym(new Date()), boardCat: '', rep: 'month', showIds: false, chan: null, tplChan: 'wa' };
 let busy = 0;
 function loading(d) { busy += d; let el = $('.loading'); if (busy > 0 && !el) { el = document.createElement('div'); el.className = 'loading'; document.body.appendChild(el); } if (busy <= 0 && el) el.remove(); }
@@ -80,7 +80,8 @@ function toast(msg, type) {
 }
 const fail = e => toast(e.message || String(e), 'err');
 function upsertLocal(listName, key, rec) {
-  const list = S.db[listName];
+  if (rec && rec._payments) { S.db.payments = (S.db.payments || []).concat(rec._payments); delete rec._payments; }
+  const list = S.db[listName] || (S.db[listName] = []);
   const i = list.findIndex(x => String(x[key]) === String(rec[key]));
   if (i >= 0) list[i] = rec; else list.push(rec);
 }
@@ -150,7 +151,8 @@ async function boot() {
     S.lang = S.db.settings.defaultLanguage === 'English' ? 'English' : 'Telugu';
     renderShell();
     const h = location.hash.slice(1);
-    go(PAGES[h] ? h : 'dashboard');
+    const home = isMgr() ? 'dashboard' : 'mywork', okPage = x => PAGES[x] && (!(NAV.find(n => n[0] === x) || [])[3] || NAV.find(n => n[0] === x)[3].includes(S.user.role));
+    go(okPage(h) ? h : home);
   } catch (e) {
     if (S.token) renderLogin(e.message); else renderLogin();
   }
@@ -174,8 +176,8 @@ const ICONS = {
 };
 const svg = (k, cls) => `<svg class="ic ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] || ''}</svg>`;
 const NAV = [
-  ['sep', 'Overview'], ['dashboard', 'dashboard', 'Dashboard'], ['reports', 'reports', 'Reports'],
-  ['sep', 'Work'], ['bookings', 'bookings', 'Bookings & orders'], ['customers', 'customers', 'Customers'], ['messages', 'messages', 'Message templates'],
+  ['sep', 'Overview'], ['dashboard', 'dashboard', 'Dashboard', ['Admin', 'Manager', 'Viewer']], ['finance', 'reports', 'Finance & P/L', ['Admin', 'Manager', 'Viewer']], ['reports', 'reports', 'Reports', ['Admin', 'Manager', 'Viewer']],
+  ['sep', 'Work'], ['mywork', 'dashboard', 'My work', ['Admin', 'Manager', 'Staff']], ['bookings', 'bookings', 'Bookings & orders'], ['customers', 'customers', 'Customers'], ['messages', 'messages', 'Message templates'],
   ['sep', 'TTD desk'], ['board', 'board', 'Release day board'], ['releases', 'releases', 'Release calendar'], ['logins', 'logins', 'TTD logins'],
   ['sep', 'Admin'], ['services', 'services', 'Services & prices'], ['activity', 'activity', 'Activity log'], ['settings', 'settings', 'Settings']
 ];
@@ -208,7 +210,8 @@ function renderShell() {
 function renderNav() {
   const pend = S.db.bookings.filter(b => PENDING.includes(b.status)).length;
   const live = S.db.bookings.filter(b => DI(b).kind === 'ttd' && (b.status === 'Requested' || b.status === 'Attempting')).length;
-  $('#nav').innerHTML = NAV.map(n => n[0] === 'sep' ? `<div class="sep">${n[1]}</div>` :
+  const vis = NAV.filter(n => !n[3] || n[3].includes(S.user.role)).filter((n, i, arr) => n[0] !== 'sep' || (arr[i + 1] && arr[i + 1][0] !== 'sep'));
+  $('#nav').innerHTML = vis.map(n => n[0] === 'sep' ? `<div class="sep">${n[1]}</div>` :
     `<button data-act="go" data-page="${n[0]}" class="${S.page === n[0] ? 'on' : ''}"><span class="ic">${svg(n[1])}</span>${n[2]}${n[0] === 'bookings' && pend ? `<span class="count">${pend}</span>` : ''}${n[0] === 'board' && live ? `<span class="count">${live}</span>` : ''}</button>`).join('');
 }
 function go(page) {
@@ -429,16 +432,86 @@ const delta = (cur, old) => {
   return `<span class="delta ${p > 0 ? 'up' : p < 0 ? 'down' : 'flat'}">${p > 0 ? '▲' : p < 0 ? '▼' : ''} ${Math.abs(p)}%</span>`;
 };
 const seriesColors = () => SERIES[isDark() ? 'dark' : 'light'];
+// ================================================================ slicers (period, department, staff, service line) – shared by dashboard, finance, my work
+const addD = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const PERIODS = [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['quarter', 'This quarter'], ['fy', 'Financial year'], ['year', 'This year'], ['all', 'All time'], ['custom', 'Custom']];
+function slRange(sl) {
+  const t = new Date(), y = t.getFullYear(), m = t.getMonth();
+  switch (sl.p) {
+    case 'today': return [iso(t), iso(t)];
+    case 'week': { const s = addD(t, -((t.getDay() + 6) % 7)); return [iso(s), iso(addD(s, 6))]; }
+    case 'month': return [iso(new Date(y, m, 1)), iso(new Date(y, m + 1, 0))];
+    case 'quarter': { const q = Math.floor(m / 3) * 3; return [iso(new Date(y, q, 1)), iso(new Date(y, q + 3, 0))]; }
+    case 'fy': { const f = m >= 3 ? y : y - 1; return [iso(new Date(f, 3, 1)), iso(new Date(f + 1, 2, 31))]; }
+    case 'year': return [iso(new Date(y, 0, 1)), iso(new Date(y, 11, 31))];
+    case 'custom': return [sl.from || iso(new Date(y, m, 1)), sl.to || iso(t)];
+    default: return ['0000-00-00', '9999-12-31'];
+  }
+}
+// The same number of days just before the chosen range (for ▲▼ comparison).
+function slPrev(r) { if (r[0] === '0000-00-00') return null; const a = toD(r[0]), b = toD(r[1]); const n = Math.round((b - a) / 86400000) + 1; return [iso(addD(a, -n)), iso(addD(a, -1))]; }
+const slJobs = (r, sl) => S.db.bookings.filter(b => inRange(b.requestDate, r) && (!sl.dept || DI(b).name === sl.dept) && (!sl.staff || b.handledBy === sl.staff) && (!sl.line || DI(b).kind === sl.line));
+const slFin = (r, sl) => (S.db.finance || []).filter(f => inRange(f.date, r) && (!sl.staff || f.paidBy === sl.staff));
+const slPay = (r, sl) => (S.db.payments || []).filter(p => inRange(p.date, r) && (!sl.staff || p.staff === sl.staff) && (!sl.dept || p.department === sl.dept));
+function money(jobs, fin) {
+  const st = stats(jobs), sum = t => fin.filter(f => f.type === t).reduce((a, f) => a + num(f.amount), 0);
+  const o = { st, earned: st.income, otherIncome: sum('Other income'), expenses: sum('Expense'), purchases: sum('Purchase'), invest: sum('Investment'), withdraw: sum('Owner withdrawal'), topup: sum('Wallet top-up') };
+  o.failedN = jobs.filter(b => FAILED.includes(b.status)).length;
+  o.failedAmt = jobs.filter(b => FAILED.includes(b.status)).reduce((a, b) => a + num(b.received), 0);
+  o.income = o.earned + o.otherIncome; o.costs = o.expenses + o.purchases; o.profit = o.income - o.costs;
+  o.margin = o.income ? Math.round(o.profit * 100 / o.income) : 0;
+  return o;
+}
+function buckets(r, view) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let a, b;
+  if (r[0] === '0000-00-00') { const ds = S.db.bookings.map(x => String(x.requestDate).slice(0, 10)).concat((S.db.finance || []).map(f => String(f.date).slice(0, 10))).filter(x => /^\d{4}-/.test(x)).sort(); a = toD(ds[0] || iso(today)); b = today; }
+  else { a = toD(r[0]); b = toD(r[1]); if (b > today && a <= today) b = today; }
+  const days = Math.round((b - a) / 86400000) + 1;
+  if (!view || view === 'auto') view = days <= 31 ? 'day' : days <= 120 ? 'week' : days <= 800 ? 'month' : 'year';
+  const start = d => view === 'day' ? new Date(d) : view === 'week' ? addD(d, -((d.getDay() + 6) % 7)) : view === 'month' ? new Date(d.getFullYear(), d.getMonth(), 1) : view === 'quarter' ? new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1) : new Date(d.getFullYear(), 0, 1);
+  const next = d => view === 'day' ? addD(d, 1) : view === 'week' ? addD(d, 7) : view === 'month' ? new Date(d.getFullYear(), d.getMonth() + 1, 1) : view === 'quarter' ? new Date(d.getFullYear(), d.getMonth() + 3, 1) : new Date(d.getFullYear() + 1, 0, 1);
+  const lab = d => view === 'day' ? d.getDate() + ' ' + MON[d.getMonth()] : view === 'week' ? 'Wk ' + d.getDate() + ' ' + MON[d.getMonth()] : view === 'month' ? MON[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2) : view === 'quarter' ? 'Q' + (Math.floor(d.getMonth() / 3) + 1) + ' ' + d.getFullYear() : String(d.getFullYear());
+  const list = [];
+  for (let s = start(a); s <= b && list.length < 400; s = next(s)) { const e = addD(next(s), -1); list.push({ label: lab(s), r: [iso(s < a ? a : s), iso(e > b ? b : e)] }); }
+  return { view, list };
+}
+function staffRows(jobs, r) {
+  const names = [...new Set(S.db.users.filter(u => u.role !== 'Viewer' && u.active !== 'No').map(u => u.name).concat(jobs.map(b => b.handledBy).filter(Boolean)))];
+  return names.map(n => {
+    const l = jobs.filter(b => b.handledBy === n), s = stats(l);
+    const coll = (S.db.payments || []).filter(p => p.staff === n && inRange(p.date, r)).reduce((a, p) => a + (p.kind === 'Refund' ? -1 : 1) * num(p.amount), 0);
+    const u = S.db.users.find(x => x.name === n) || {};
+    return { n, role: u.role || '', s, coll };
+  }).filter(x => x.s.total || x.coll).sort((a, b) => b.s.income - a.s.income);
+}
+function slicerBar(opts) {
+  const sl = S.sl, o = opts || {};
+  const staffList = S.db.users.filter(u => u.role !== 'Viewer').map(u => u.name);
+  return `<div class="card slicers">
+    <div class="seg">${PERIODS.map(p => `<button class="${sl.p === p[0] ? 'on' : ''}" data-act="slP" data-p="${p[0]}">${p[1]}</button>`).join('')}</div>
+    ${sl.p === 'custom' ? `<label class="small">From <input class="i sm" type="date" data-sl="from" value="${esc(sl.from || slRange(sl)[0])}"></label><label class="small">To <input class="i sm" type="date" data-sl="to" value="${esc(sl.to || slRange(sl)[1])}"></label>` : ''}
+    ${o.noDept ? '' : `<select class="i sm" data-sl="line"><option value="">All service lines</option>${LINES.map(l => `<option value="${l[0]}" ${sl.line === l[0] ? 'selected' : ''}>${l[1]}</option>`).join('')}</select>
+    <select class="i sm" data-sl="dept"><option value="">All departments</option>${S.db.depts.map(d => `<option ${sl.dept === d[0] ? 'selected' : ''}>${esc(d[0])}</option>`).join('')}</select>`}
+    ${o.noStaff ? '' : `<select class="i sm" data-sl="staff"><option value="">All staff</option>${staffList.map(n => `<option ${sl.staff === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`}
+    ${sl.dept || sl.staff || sl.line || sl.p !== 'month' ? '<button class="btn ghost sm" data-act="slReset">✕ Reset</button>' : ''}
+    <span class="muted small" style="margin-left:auto">${fD(slRange(sl)[0]) || 'Start'} – ${fD(slRange(sl)[1]) || 'today'}</span>
+  </div>`;
+}
+const LINES = [['ttd', 'TTD'], ['travel', 'Travel tickets'], ['booking', 'Temples & stays'], ['app', 'Applications'], ['quick', 'Counter & bills']];
+const kpiBox = (lbl, val, sub, d, go, cls) => `<div class="kpi ${cls || ''}" ${go ? `data-act="kpiGo" data-go="${go}"` : ''}><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${d || ''} ${sub || ''}</div></div>`;
+const isMgr = () => ['Admin', 'Manager', 'Viewer'].includes(S.user.role);
+
+// ---------------------------------------------------------------- dashboard (Admin, Manager, Viewer)
 PAGES.dashboard = () => {
-  const r = periodRange(S.period), pr = prevRange(S.period);
-  const list = S.db.bookings.filter(b => inRange(b.requestDate, r));
-  const prev = pr ? S.db.bookings.filter(b => inRange(b.requestDate, pr)) : null;
-  const st = stats(list), sp = prev ? stats(prev) : {};
-  const all = S.db.bookings, t = todayIso(), in7 = iso(new Date(Date.now() + 7 * 86400000));
-  const open = all.filter(b => PENDING.includes(b.status));
-  const periods = [['month', 'This month'], ['last', 'Last month'], ['q', '3 months'], ['year', 'This year'], ['all', 'All time']];
-  const vs = { month: 'vs same days last month', last: 'vs month before', q: 'vs previous 3 months', year: 'vs same time last year' }[S.period] || '';
-  const kpi = (lbl, val, sub, d, go) => `<div class="kpi" ${go ? `data-act="kpiGo" data-go="${go}"` : ''}><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${d || ''}${sub}</div></div>`;
+  if (!isMgr()) return PAGES.mywork();
+  const sl = S.sl, r = slRange(sl), pr = slPrev(r);
+  const jobs = slJobs(r, sl), M = money(jobs, slFin(r, sl));
+  const P = pr ? money(slJobs(pr, sl), slFin(pr, sl)) : null;
+  const all = S.db.bookings, t = todayIso();
+  const open = all.filter(b => PENDING.includes(b.status) && (!sl.staff || b.handledBy === sl.staff) && (!sl.dept || DI(b).name === sl.dept));
+  const newCust = S.db.customers.filter(c => inRange(c.createdOn, r)).length;
+  const d = (k, sub) => P ? delta(M[k], P[k]) : '';
   const q = [
     ['critical', 'Refunds to give', all.filter(b => b.refundStatus === 'Refund Pending').length, 'refund'],
     ['critical', 'Applications past expected date', all.filter(b => overdue(b, t)).length, 'overdue'],
@@ -448,64 +521,276 @@ PAGES.dashboard = () => {
     ['info', 'Ready to collect: call customer', all.filter(b => b.status === 'Ready to Collect').length, 'Ready to Collect'],
     ['info', 'Darshan / journey in next 2 days', all.filter(b => BOOKED.includes(b.status) && !b.reminderSentOn && b.serviceDate && daysBetween(t, b.serviceDate) >= 0 && daysBetween(t, b.serviceDate) <= 2).length, 'remind']
   ].filter(x => x[2]);
-  const qc = { critical: 'var(--red)', warning: 'var(--amber)', info: 'var(--accent)' };
-  const qLbl = { critical: 'Urgent', warning: 'Follow up', info: 'Today' };
-  const soon = all.filter(b => PENDING.concat(['Booked']).includes(b.status)).map(b => {
-    const d = DI(b).kind === 'app' ? b.expectedDate : (b.status === 'Booked' ? (b.serviceDate || b.checkIn) : '');
-    return d && d >= t && d <= in7 ? [d, b] : null; }).filter(Boolean).sort((a, b) => a[0].localeCompare(b[0])).slice(0, 7);
-  const rels = upcomingReleases().slice(0, 4);
-  const pipe = [['Open', st.pending, 'var(--accent)', 'pending'], ['Done', st.booked, 'var(--green)', 'booked'], ['Not done', st.failed, 'var(--red)', 'failed'], ['Cancelled', st.cancelled, 'var(--muted)', 'Cancelled']];
-  const ptot = Math.max(1, st.total);
-  const groups = GROUPS.map(([k, n], i) => { const v = list.filter(b => DI(b).kind === k); return [n, stats(v), seriesColors()[i]]; });
+  const lowW = walletRows().filter(w => w.low);
+  const qc = { critical: 'var(--red)', warning: 'var(--amber)', info: 'var(--accent)' }, qLbl = { critical: 'Urgent', warning: 'Follow up', info: 'Today' };
+  const refunds = jobs.filter(b => FAILED.includes(b.status) || b.status === 'Cancelled').filter(b => num(b.received) > 0);
+  const svcTop = Object.entries(jobs.reduce((a, b) => { const k = b.service || '—'; a[k] = a[k] || [0, 0, 0]; a[k][0]++; if (BOOKED.includes(b.status)) a[k][1] += num(b.serviceCharge); a[k][2] += num(b.received); return a; }, {})).sort((a, b) => b[1][1] - a[1][1]).slice(0, 8);
+  const modes = slPay(r, sl).filter(p => p.kind === 'Receipt').reduce((a, p) => { a[p.mode] = (a[p.mode] || 0) + num(p.amount); return a; }, {});
+  const mTot = Object.values(modes).reduce((a, x) => a + x, 0) || 1;
+  const staff = staffRows(jobs, r);
   return `
   ${S.db.defaultPin ? `<div class="banner">You are still using a default password. <a href="#" data-act="go" data-page="settings">Change it in Settings</a>.</div>` : ''}
-  <div class="pageHead"><div><h2>Overview</h2><p>${esc(S.db.settings.shopName || 'Adithya Internet & CSC Center')} · ${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
-    <div class="seg">${periods.map(p => `<button class="${S.period === p[0] ? 'on' : ''}" data-act="period" data-p="${p[0]}">${p[1]}</button>`).join('')}</div></div>
+  <div class="pageHead"><div><h2>Business dashboard</h2><p>${esc(S.db.settings.shopName || 'Adithya Internet & CSC Center')} · ${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
+    <div class="row"><button class="btn sm" data-act="go" data-page="finance">💰 Finance &amp; P/L</button></div></div>
+  ${slicerBar()}
+  <div class="kpiHead">💰 Money ${P ? '<span class="muted small">▲▼ vs the same number of days before</span>' : ''}</div>
   <div class="kpis">
-    ${kpi('Money received', inr(st.net), (vs ? vs : 'net of refunds'), delta(st.net, sp.net))}
-    ${kpi('Service income', inr(st.income), 'your charges on finished work', delta(st.income, sp.income))}
-    ${kpi('New entries', num(st.total).toLocaleString('en-IN'), vs || 'bookings, applications, sales', delta(st.total, sp.total), 'all')}
-    ${kpi('Completed', num(st.booked).toLocaleString('en-IN'), 'success rate ' + st.rate + '%', delta(st.booked, sp.booked), 'booked')}
-    ${kpi('Open work', open.length, 'waiting across all departments', '', 'pending')}
-    ${kpi('Refunds pending', inr(st.refundPending), st.refundPendingN + ' customer(s)', '', 'refund')}
+    ${kpiBox('Total received', inr(M.st.received), 'from customers', d('st') && delta(M.st.received, P.st.received))}
+    ${kpiBox('Refunded', inr(M.st.refunded), 'given back', '')}
+    ${kpiBox('Earned (service charges)', inr(M.earned), 'on finished work', d('earned'))}
+    ${kpiBox('Expenses + purchases', inr(M.costs), 'from Finance', d('costs'))}
+    ${kpiBox(M.profit >= 0 ? 'Net profit' : 'Net loss', inr(Math.abs(M.profit)), 'margin ' + M.margin + '%', d('profit'), '', M.profit >= 0 ? 'pos' : 'neg')}
+    ${kpiBox('Refunds pending', inr(M.st.refundPending), M.st.refundPendingN + ' customer(s)', '', 'refund', M.st.refundPending ? 'neg' : '')}
+  </div>
+  <div class="kpiHead">🧾 Work</div>
+  <div class="kpis">
+    ${kpiBox('Jobs entered', M.st.total, 'bookings, applications, sales', P ? delta(M.st.total, P.st.total) : '', 'all')}
+    ${kpiBox('Completed', M.st.booked, 'success rate ' + M.st.rate + '%', P ? delta(M.st.booked, P.st.booked) : '', 'booked', 'pos')}
+    ${kpiBox('Failed / not booked', M.failedN, inr(M.failedAmt) + ' was paid by them', '', 'failed', M.failedN ? 'neg' : '')}
+    ${kpiBox('Open now', open.length, 'all dates', '', 'pending')}
+    ${kpiBox('Overdue', all.filter(b => overdue(b, t)).length, 'past expected date', '', 'overdue')}
+    ${kpiBox('New customers', newCust, 'added in this period', '')}
   </div>
   <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr);margin-top:16px" id="dashRow1">
-    <div class="card"><h3>Money received by service line <span class="muted">last 6 months</span></h3>
-      <div class="legend">${GROUPS.map((g, i) => `<span><i style="background:${seriesColors()[i]}"></i>${g[1]}</span>`).join('')}</div>
-      <div class="chartBox"><canvas id="chTrend" aria-label="Money received per month, stacked by service line"></canvas></div></div>
+    <div class="card"><h3>Earned vs costs <span class="muted">profit line · ${esc(buckets(r).view)}-wise</span></h3>
+      <div class="legend"><span><i style="background:${seriesColors()[2]}"></i>Earned + other income</span><span><i style="background:${seriesColors()[1]}"></i>Expenses + purchases</span><span><i style="background:${seriesColors()[0]}"></i>Profit</span></div>
+      <div class="chartBox"><canvas id="chTrend" aria-label="Earned, costs and profit over time"></canvas></div></div>
     <div class="card"><h3>Work queue <span class="muted">${q.reduce((a, x) => a + x[2], 0)} items</span></h3>
-      ${q.length ? `<div class="queue">${q.map(x => `<div class="q" data-act="kpiGo" data-go="${esc(x[3])}"><span class="dot" style="background:${qc[x[0]]}"></span><span class="t">${x[1]}<div class="muted small">${qLbl[x[0]]}</div></span><span class="n">${x[2]}</span></div>`).join('')}</div>` : '<div class="alert ok">All clear. Nothing waiting.</div>'}</div>
+      ${q.length || lowW.length ? `<div class="queue">${q.map(x => `<div class="q" data-act="kpiGo" data-go="${esc(x[3])}"><span class="dot" style="background:${qc[x[0]]}"></span><span class="t">${x[1]}<div class="muted small">${qLbl[x[0]]}</div></span><span class="n">${x[2]}</span></div>`).join('')}
+      ${lowW.map(w => `<div class="q" data-act="finTab" data-t="wallets"><span class="dot" style="background:var(--red)"></span><span class="t">Low wallet: ${esc(w.name)}<div class="muted small">Top up</div></span><span class="n">${inr(w.bal)}</span></div>`).join('')}</div>` : '<div class="alert ok">All clear. Nothing waiting.</div>'}</div>
   </div>
-  <div class="grid g3" style="margin-top:16px">
-    <div class="card"><h3>Status of this period's work</h3>
-      <div class="meter" role="img" aria-label="Status split">${pipe.filter(x => x[1]).map(x => `<span title="${x[0]}: ${x[1]}" style="width:${x[1] * 100 / ptot}%;background:${x[2]}"></span>`).join('')}</div>
-      <div class="queue" style="margin-top:8px">${pipe.map(x => `<div class="q" data-act="kpiGo" data-go="${x[3]}"><span class="dot" style="background:${x[2]}"></span><span class="t">${x[0]}</span><span class="muted small">${Math.round(x[1] * 100 / ptot)}%</span><span class="n">${x[1]}</span></div>`).join('')}</div></div>
-    <div class="card"><h3>Coming up <span class="muted">next 7 days</span></h3><div class="list">
-      ${soon.map(([d, b]) => { const dd = toD(d); return `<div class="li" data-act="openBooking" data-id="${esc(b.bookingId)}"><div class="date"><b>${dd.getDate()}</b><small>${MON[dd.getMonth()]}</small></div><div class="main2"><b>${esc(b.customerName)}</b><div class="muted small">${esc(DI(b).name)} · ${esc(b.service)}</div></div>${badge(b.status)}</div>`; }).join('') || '<div class="muted small">Nothing due in the next 7 days.</div>'}
-    </div></div>
-    <div class="card"><h3>TTD quota releases <a class="act" href="#" data-act="go" data-page="releases">Calendar</a></h3><div class="list">
-      ${rels.map(x => { const d = new Date(x.t); const n = all.filter(b => b.category === x.category && (b.status === 'Requested' || b.status === 'Attempting')).length; return `<div class="li" data-act="boardCat" data-cat="${esc(x.category)}"><div class="date"><b>${d.getDate()}</b><small>${MON[d.getMonth()]}</small></div><div class="main2"><b>${esc(x.label || x.category)}</b><div class="muted small">in <span class="cd" data-t="${x.t}"></span> · ${n} waiting</div></div></div>`; }).join('') || '<div class="muted small">No release dates entered.</div>'}
-    </div></div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h3>Earned by department <span class="muted">top 10</span></h3><div class="chartBox" style="height:260px"><canvas id="chDept" aria-label="Service charges earned by department"></canvas></div></div>
+    <div class="card"><h3>Failed jobs &amp; refunds <span class="muted">${refunds.length}</span></h3>
+      ${refunds.length ? `<div class="tableWrap" style="max-height:280px"><table class="t"><thead><tr><th>Customer</th><th>Service</th><th class="right">Paid</th><th>Refund</th></tr></thead><tbody>
+      ${refunds.slice(0, 40).map(b => `<tr class="click" data-act="openBooking" data-id="${esc(b.bookingId)}"><td><b>${esc(b.customerName)}</b><div class="muted small">${esc(b.bookingId)}</div></td><td class="small">${esc(b.service)}</td><td class="right">${inr(b.received)}</td><td>${badge(b.refundStatus || 'Refund Pending')}${b.refundStatus === 'Refunded' ? `<div class="muted small">${inr(b.refundAmount)} · ${fD(b.refundDate)}</div>` : ''}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="alert ok">No failed jobs with money in this period.</div>'}</div>
   </div>
-  <div class="card" style="margin-top:16px"><h3>Service lines <span class="muted">${esc(periods.find(p => p[0] === S.period)[1].toLowerCase())}</span></h3>
-    <div class="grid g4">${groups.map(([n, x, c]) => `<div><div class="row small" style="gap:6px;color:var(--ink2)"><i style="width:10px;height:10px;border-radius:3px;background:${c};display:inline-block"></i>${n}</div><div style="font-size:19px;font-weight:650;margin-top:4px">${inr(x.received)}</div><div class="muted small">${x.total} entries · ${x.pending} open · income ${inr(x.income)}</div></div>`).join('')}</div></div>
-  ${deptCard(list, t)}`;
+  <div class="card" style="margin-top:16px"><h3>Staff performance <span class="muted">click a name to filter</span></h3>
+    ${staff.length ? `<div class="tableWrap"><table class="t"><thead><tr><th>Staff</th><th class="right">Jobs</th><th class="right">Done</th><th class="right">Failed</th><th class="right">Pending</th><th>Success</th><th class="right">Earned</th><th class="right">Collected</th></tr></thead><tbody>
+    ${staff.map(x => `<tr class="click" data-act="slStaff" data-n="${esc(x.n)}"><td><b>${esc(x.n)}</b> <span class="muted small">${esc(x.role)}</span></td><td class="right">${x.s.total}</td><td class="right">${x.s.booked}</td><td class="right">${x.s.failed}</td><td class="right">${x.s.pending}</td>
+      <td><div class="row" style="gap:6px"><div class="meter" style="width:80px;height:8px"><span style="width:${x.s.rate}%;background:var(--green)"></span></div><span class="small">${x.s.rate}%</span></div></td><td class="right"><b>${inr(x.s.income)}</b></td><td class="right">${inr(x.coll)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<div class="muted small">No work in this period.</div>'}</div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h3>Top services <span class="muted">by earnings</span></h3>
+      ${svcTop.length ? `<div class="tableWrap"><table class="t"><thead><tr><th>Service</th><th class="right">Jobs</th><th class="right">Earned</th><th class="right">Received</th></tr></thead><tbody>${svcTop.map(([n, v]) => `<tr><td class="small">${esc(n)}</td><td class="right">${v[0]}</td><td class="right"><b>${inr(v[1])}</b></td><td class="right">${inr(v[2])}</td></tr>`).join('')}</tbody></table></div>` : '<div class="muted small">No data.</div>'}</div>
+    <div class="card"><h3>How customers paid <span class="muted">receipts in this period</span></h3>
+      ${Object.keys(modes).length ? `<div class="meter" style="height:14px">${Object.entries(modes).map(([k, v], i) => `<span title="${esc(k)}" style="width:${v * 100 / mTot}%;background:${seriesColors()[i % 4]}"></span>`).join('')}</div>
+      <div class="queue" style="margin-top:8px">${Object.entries(modes).map(([k, v], i) => `<div class="q"><span class="dot" style="background:${seriesColors()[i % 4]}"></span><span class="t">${esc(k)}</span><span class="muted small">${Math.round(v * 100 / mTot)}%</span><span class="n">${inr(v)}</span></div>`).join('')}</div>` : '<div class="muted small">Receipts are recorded from v4 onwards.</div>'}</div>
+  </div>
+  ${deptCard(jobs, t)}`;
 };
-AFTER.dashboard = () => {
-  if (typeof Chart === 'undefined') return;
+AFTER.dashboard = () => { if (isMgr()) drawCharts('chTrend', 'chDept'); };
+function chartBase() {
   const dk = isDark();
   Chart.defaults.font.family = "'Inter', sans-serif";
   Chart.defaults.color = dk ? '#8E9BB3' : '#64748B';
-  const grid = dk ? 'rgba(255,255,255,.06)' : 'rgba(15,23,42,.06)';
-  const months = []; const now = new Date();
-  for (let i = 5; i >= 0; i--) months.push(ym(new Date(now.getFullYear(), now.getMonth() - i, 1)));
-  const surface = getComputedStyle(document.documentElement).getPropertyValue('--panel').trim() || '#fff';
-  S.charts.push(new Chart($('#chTrend'), { type: 'bar',
-    data: { labels: months.map(ymLabel), datasets: GROUPS.map(([k, n], i) => ({ label: n, backgroundColor: seriesColors()[i], borderColor: surface, borderWidth: { top: 2 }, borderSkipped: 'bottom', borderRadius: { topLeft: 4, topRight: 4 }, maxBarThickness: 36, stack: 's',
-      data: months.map(m => S.db.bookings.filter(b => String(b.requestDate).slice(0, 7) === m && DI(b).kind === k).reduce((a, b) => a + num(b.received), 0)) })) },
-    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + inr(c.parsed.y), footer: items => 'Total: ' + inr(items.reduce((a, x) => a + x.parsed.y, 0)) } } },
-      scales: { x: { stacked: true, grid: { display: false }, border: { display: false } }, y: { stacked: true, grid: { color: grid }, border: { display: false }, ticks: { callback: v => '₹' + (v >= 1000 ? (v / 1000) + 'k' : v) } } } } }));
+  return dk ? 'rgba(255,255,255,.06)' : 'rgba(15,23,42,.06)';
+}
+const kfmt = v => (v < 0 ? '-' : '') + '₹' + (Math.abs(v) >= 100000 ? (Math.abs(v) / 100000).toFixed(1) + 'L' : Math.abs(v) >= 1000 ? Math.round(Math.abs(v) / 1000) + 'k' : Math.abs(v));
+function drawCharts(trendId, deptId, view) {
+  if (typeof Chart === 'undefined') return;
+  const grid = chartBase(), sl = S.sl, r = slRange(sl), c = seriesColors();
+  const B = buckets(r, view).list.map(x => Object.assign(x, { m: money(slJobs(x.r, sl), slFin(x.r, sl)) }));
+  if ($('#' + trendId)) S.charts.push(new Chart($('#' + trendId), { data: { labels: B.map(x => x.label), datasets: [
+    { type: 'bar', label: 'Earned + other income', data: B.map(x => x.m.income), backgroundColor: c[2], borderRadius: 4, maxBarThickness: 28 },
+    { type: 'bar', label: 'Expenses + purchases', data: B.map(x => x.m.costs), backgroundColor: c[1], borderRadius: 4, maxBarThickness: 28 },
+    { type: 'line', label: 'Profit', data: B.map(x => x.m.profit), borderColor: c[0], backgroundColor: c[0], tension: 0, pointRadius: B.length > 40 ? 0 : 3, borderWidth: 2 }] },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => ' ' + x.dataset.label + ': ' + inr(x.parsed.y) } } },
+      scales: { x: { grid: { display: false }, border: { display: false } }, y: { grid: { color: grid }, border: { display: false }, ticks: { callback: kfmt } } } } }));
+  if (deptId && $('#' + deptId)) {
+    const rows = deptRows(slJobs(r, sl)).sort((a, b) => b[1].income - a[1].income).slice(0, 10);
+    S.charts.push(new Chart($('#' + deptId), { type: 'bar', data: { labels: rows.map(x => x[0]), datasets: [{ label: 'Earned', data: rows.map(x => x[1].income), backgroundColor: c[0], borderRadius: 4, maxBarThickness: 18 }] },
+      options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: x => ' Earned: ' + inr(x.parsed.x) } } },
+        scales: { x: { grid: { color: grid }, border: { display: false }, ticks: { callback: kfmt } }, y: { grid: { display: false }, border: { display: false } } } } }));
+  }
+}
+
+// ---------------------------------------------------------------- wallets
+const NO_DEBIT = ['Requested', 'Attempting', 'Not Booked', 'Cancelled', 'Lucky Dip - Not Selected', 'Lucky Dip - Registered'];
+function walletRows() {
+  return (S.db.wallets || []).filter(w => w.active !== 'No').map(w => {
+    const from = String(w.openingDate || '0000').slice(0, 10);
+    const top = (S.db.finance || []).filter(f => f.type === 'Wallet top-up' && f.wallet === w.name && String(f.date).slice(0, 10) >= from).reduce((a, f) => a + num(f.amount), 0);
+    const used = S.db.bookings.filter(b => b.walletUsed === w.name && !NO_DEBIT.includes(b.status) && String(b.requestDate).slice(0, 10) >= from).reduce((a, b) => a + num(b.ticketAmount), 0);
+    const bal = num(w.openingBalance) + top - used;
+    return Object.assign({}, w, { top, used, bal, low: num(w.lowAlert) > 0 && bal < num(w.lowAlert) });
+  });
+}
+
+// ---------------------------------------------------------------- finance & profit / loss
+const FIN_TABS = [['pl', '📊 Profit & loss'], ['entries', '🧾 Expenses & investments'], ['receipts', '💵 Receipts'], ['wallets', '👛 Wallets'], ['cash', '🪙 Cash closing']];
+const FIN_VIEWS = [['day', 'Daily'], ['week', 'Weekly'], ['month', 'Monthly'], ['quarter', 'Quarterly'], ['year', 'Yearly']];
+PAGES.finance = () => {
+  const tab = S.finTab || 'pl', sl = S.sl, r = slRange(sl);
+  return `${slicerBar({ noDept: tab !== 'receipts' })}
+  <div class="seg" style="margin-bottom:14px">${FIN_TABS.map(x => `<button class="${tab === x[0] ? 'on' : ''}" data-act="finTab" data-t="${x[0]}">${x[1]}</button>`).join('')}</div>
+  ${FIN[tab](r, sl)}`;
+};
+const FIN = {};
+FIN.pl = (r, sl) => {
+  const M = money(slJobs(r, sl), slFin(r, sl));
+  const fin = slFin(r, sl);
+  const byCat = t => Object.entries(fin.filter(f => f.type === t).reduce((a, f) => { const k = f.category || 'Other'; a[k] = (a[k] || 0) + num(f.amount); return a; }, {})).sort((a, b) => b[1] - a[1]);
+  const allM = money(S.db.bookings, S.db.finance || []);
+  const invested = allM.invest, recovered = invested ? Math.round(allM.profit * 100 / invested) : 0;
+  const view = S.finView || (buckets(r).view === 'day' && r[0] === r[1] ? 'day' : buckets(r).view);
+  const B = buckets(r, view).list.map(x => Object.assign(x, { m: money(slJobs(x.r, sl), slFin(x.r, sl)) }));
+  const line = (a, b, cls) => `<tr class="${cls || ''}"><td>${a}</td><td class="right">${b}</td></tr>`;
+  return `<div class="kpis">
+    ${kpiBox('Income', inr(M.income), 'service charges ' + inr(M.earned) + ' + other ' + inr(M.otherIncome))}
+    ${kpiBox('Costs', inr(M.costs), 'expenses ' + inr(M.expenses) + ' · purchases ' + inr(M.purchases))}
+    ${kpiBox(M.profit >= 0 ? 'Net profit' : 'Net loss', inr(Math.abs(M.profit)), 'margin ' + M.margin + '%', '', '', M.profit >= 0 ? 'pos' : 'neg')}
+    ${kpiBox('Money handled', inr(M.st.received), 'refunded ' + inr(M.st.refunded) + ' · govt / ticket fees ' + inr(M.st.ticket))}
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h3>Profit &amp; loss statement <span class="muted">${fD(r[0]) || 'start'} – ${fD(r[1])}</span></h3>
+      <table class="t"><tbody>
+      ${line('<b>Income</b>', '')}${line('Service charges earned (finished work)', inr(M.earned))}${byCat('Other income').map(([k, v]) => line('Other income · ' + esc(k), inr(v))).join('') || line('Other income', inr(0))}
+      ${line('<b>Total income</b>', '<b>' + inr(M.income) + '</b>')}
+      ${line('<b>Costs</b>', '')}${byCat('Expense').map(([k, v]) => line('Expense · ' + esc(k), inr(v))).join('')}${byCat('Purchase').map(([k, v]) => line('Purchase · ' + esc(k), inr(v))).join('')}
+      ${line('<b>Total costs</b>', '<b>' + inr(M.costs) + '</b>')}
+      ${line(`<b>${M.profit >= 0 ? 'NET PROFIT' : 'NET LOSS'}</b>`, `<b style="color:var(--${M.profit >= 0 ? 'green' : 'red'})">${inr(Math.abs(M.profit))}</b>`)}
+      </tbody></table>
+      <p class="muted small">Govt / ticket fees collected from customers are passed on, so they are not income. Investments, owner withdrawals and wallet top-ups are shown separately, not as costs.</p></div>
+    <div class="card"><h3>Investment &amp; where we stand <span class="muted">all time</span></h3>
+      <div class="kv"><div><small>Total invested</small><span><b>${inr(invested)}</b></span></div><div><small>Owner withdrawals</small><span>${inr(allM.withdraw)}</span></div>
+      <div><small>Total profit so far</small><span style="color:var(--${allM.profit >= 0 ? 'green' : 'red'})"><b>${allM.profit < 0 ? '−' : ''}${inr(Math.abs(allM.profit))}</b></span></div><div><small>Wallet top-ups</small><span>${inr(allM.topup)}</span></div></div>
+      ${invested ? `<div style="margin-top:12px"><div class="small">Investment recovered: <b>${Math.max(0, recovered)}%</b></div><div class="meter" style="height:12px;margin-top:6px"><span style="width:${Math.min(100, Math.max(0, recovered))}%;background:var(--green)"></span></div></div>` : ''}
+      <div class="alert ${allM.profit - invested >= 0 ? 'ok' : ''}" style="margin-top:12px">${!invested ? 'Add your investments (Expenses &amp; investments › ＋ Investment) to see when the business pays them back.' : allM.profit >= invested ? '✅ The business has earned back all the money invested and is in profit by ' + inr(allM.profit - invested) + '.' : '⏳ ' + inr(invested - allM.profit) + ' more profit needed to earn back the investment.'}</div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><div class="row between wrap"><h3 style="margin:0">Period by period</h3>
+    <div class="row wrap"><div class="seg">${FIN_VIEWS.map(v => `<button class="${view === v[0] ? 'on' : ''}" data-act="finView" data-v="${v[0]}">${v[1]}</button>`).join('')}</div><button class="btn sm" data-act="exportPL">⬇ Excel</button></div></div>
+    <div class="chartBox" style="margin-top:10px"><canvas id="chPL" aria-label="Income, costs and profit per period"></canvas></div>
+    <div class="tableWrap" style="margin-top:10px;max-height:420px"><table class="t"><thead><tr><th>Period</th><th class="right">Jobs</th><th class="right">Received</th><th class="right">Earned</th><th class="right">Other income</th><th class="right">Expenses</th><th class="right">Purchases</th><th class="right">Profit / loss</th></tr></thead><tbody>
+    ${B.slice().reverse().map(x => `<tr><td class="nowrap">${esc(x.label)}</td><td class="right">${x.m.st.total}</td><td class="right">${inr(x.m.st.received)}</td><td class="right">${inr(x.m.earned)}</td><td class="right">${inr(x.m.otherIncome)}</td><td class="right">${inr(x.m.expenses)}</td><td class="right">${inr(x.m.purchases)}</td><td class="right"><b style="color:var(--${x.m.profit >= 0 ? 'green' : 'red'})">${x.m.profit < 0 ? '−' : ''}${inr(Math.abs(x.m.profit))}</b></td></tr>`).join('')}
+    </tbody></table></div></div>`;
+};
+FIN.entries = (r, sl) => {
+  const fin = slFin(r, sl).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const tot = t => fin.filter(f => f.type === t).reduce((a, f) => a + num(f.amount), 0);
+  const types = S.user.role === 'Staff' ? ['Expense'] : S.db.lists.financeTypes;
+  return `<div class="toolbar">${S.user.role === 'Viewer' ? '' : types.map(t => `<button class="btn ${t === 'Expense' ? 'primary' : ''}" data-act="editFin" data-id="" data-t="${esc(t)}">＋ ${esc(t)}</button>`).join('')}</div>
+  <div class="kpis">${S.db.lists.financeTypes.map(t => kpiBox(t, inr(tot(t)), fin.filter(f => f.type === t).length + ' entries')).join('')}</div>
+  <div class="card" style="margin-top:16px"><div class="tableWrap"><table class="t"><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Description</th><th class="right">Amount</th><th>Mode</th><th>Staff</th><th>Bill</th></tr></thead><tbody>
+  ${fin.map(f => `<tr class="click" data-act="editFin" data-id="${esc(f.entryId)}"><td class="nowrap">${fD(f.date)}</td><td>${badge(f.type)}</td><td class="small">${esc(f.category)}</td><td class="small">${esc(f.description)}${f.vendor ? '<div class="muted">' + esc(f.vendor) + '</div>' : ''}${f.wallet ? '<div class="muted">→ ' + esc(f.wallet) + '</div>' : ''}</td><td class="right"><b>${inr(f.amount)}</b></td><td class="small">${esc(f.mode)}</td><td class="small">${esc(f.paidBy)}</td><td>${f.billLink ? `<a target="_blank" href="${esc(f.billLink)}" onclick="event.stopPropagation()">📎</a>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">No entries in this period. Add rent, electricity, salaries, paper and ink, new printer, money you invested…</td></tr>'}
+  </tbody></table></div></div>`;
+};
+FIN.receipts = (r, sl) => {
+  const pays = slPay(r, sl).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const rec = pays.filter(p => p.kind !== 'Refund').reduce((a, p) => a + num(p.amount), 0), ref = pays.filter(p => p.kind === 'Refund').reduce((a, p) => a + num(p.amount), 0);
+  return `<div class="kpis">${kpiBox('Receipts', inr(rec), pays.filter(p => p.kind === 'Receipt').length + ' receipts')}${kpiBox('Refunds paid', inr(ref), pays.filter(p => p.kind === 'Refund').length + ' refunds')}${kpiBox('Net collected', inr(rec - ref), '')}</div>
+  <div class="card" style="margin-top:16px"><div class="row between"><h3 style="margin:0">Money ledger</h3><button class="btn sm" data-act="exportPay">⬇ Excel</button></div>
+  <div class="tableWrap" style="margin-top:10px"><table class="t"><thead><tr><th>Receipt no</th><th>Date</th><th>Customer</th><th>Booking</th><th class="right">Amount</th><th>Mode</th><th>By</th></tr></thead><tbody>
+  ${pays.map(p => `<tr class="click" data-act="openBooking" data-id="${esc(p.bookingId)}"><td class="nowrap"><b>${esc(p.receiptNo || '—')}</b> ${p.kind === 'Refund' ? badge('Refunded') : ''}</td><td class="nowrap small">${fDT(p.date)}</td><td>${esc(p.customerName)}</td><td class="small">${esc(p.bookingId)}<div class="muted">${esc(p.department)}</div></td><td class="right"><b style="color:var(--${p.kind === 'Refund' ? 'red' : 'ink'})">${p.kind === 'Refund' ? '−' : ''}${inr(p.amount)}</b></td><td class="small">${esc(p.mode)}</td><td class="small">${esc(p.staff)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">No receipts in this period.</td></tr>'}
+  </tbody></table></div></div>`;
+};
+FIN.wallets = () => {
+  const W = walletRows();
+  return `<div class="toolbar">${canManage() ? '<button class="btn primary" data-act="editWallet" data-id="">＋ Add wallet / portal account</button>' : ''}${S.user.role === 'Viewer' ? '' : '<button class="btn" data-act="editFin" data-id="" data-t="Wallet top-up">＋ Wallet top-up</button>'}
+    <span class="muted small">Balance = opening + top-ups − ticket / govt fees of jobs paid from that wallet. Choose the wallet on each job.</span></div>
+  <div class="kpis">${W.map(w => `<div class="kpi ${w.low ? 'neg' : ''}" ${canManage() ? `data-act="editWallet" data-id="${esc(w.walletId)}"` : ''}><div class="lbl">👛 ${esc(w.name)}</div><div class="val">${inr(w.bal)}</div><div class="sub">${esc(w.portal || '')} · top-ups ${inr(w.top)} · used ${inr(w.used)}${w.low ? ' · <b>LOW – top up</b>' : ''}</div></div>`).join('') || '<div class="muted small">No wallets yet. Add IRCTC agent wallet, AEPS / CSC wallet, bus or flight portal balance…</div>'}</div>`;
+};
+FIN.cash = (r) => {
+  const t = todayIso();
+  const people = S.user.role === 'Staff' ? [S.user.name] : S.db.users.filter(u => u.active !== 'No' && u.role !== 'Viewer').map(u => u.name);
+  const rows = people.map(n => Object.assign({ n }, cashLocal(n, t), { done: (S.db.closings || []).find(c => c.staff === n && String(c.date).slice(0, 10) === t) }));
+  const hist = (S.db.closings || []).filter(c => inRange(c.date, r)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  return `<div class="card"><h3>Today's cash <span class="muted">${fD(t)}</span></h3>
+    <div class="tableWrap"><table class="t"><thead><tr><th>Staff</th><th class="right">Cash in</th><th class="right">Cash out</th><th class="right">Should have</th><th>Closed?</th><th></th></tr></thead><tbody>
+    ${rows.map(x => `<tr><td><b>${esc(x.n)}</b></td><td class="right">${inr(x.cashIn)}</td><td class="right">${inr(x.cashOut)}</td><td class="right"><b>${inr(x.expected)}</b></td><td>${x.done ? `${inr(x.done.counted)} counted · <b style="color:var(--${num(x.done.difference) === 0 ? 'green' : 'red'})">${num(x.done.difference) === 0 ? 'matches' : (num(x.done.difference) > 0 ? 'extra ' : 'short ') + inr(Math.abs(num(x.done.difference)))}</b>` : '<span class="muted">not yet</span>'}</td>
+      <td class="right">${S.user.role !== 'Viewer' && (x.n === S.user.name || canManage()) ? `<button class="btn sm" data-act="closeCash" data-n="${esc(x.n)}">🪙 Close cash</button>` : ''}</td></tr>`).join('')}
+    </tbody></table></div><p class="muted small">Cash in = cash receipts + cash other income. Cash out = cash refunds + cash expenses paid by that person. UPI / bank money is not counted here.</p></div>
+  <div class="card" style="margin-top:16px"><h3>Closing history</h3><div class="tableWrap"><table class="t"><thead><tr><th>Date</th><th>Staff</th><th class="right">Expected</th><th class="right">Counted</th><th class="right">Difference</th><th>Note</th></tr></thead><tbody>
+    ${hist.map(c => `<tr><td>${fD(c.date)}</td><td>${esc(c.staff)}</td><td class="right">${inr(c.expected)}</td><td class="right">${inr(c.counted)}</td><td class="right"><b style="color:var(--${num(c.difference) === 0 ? 'green' : 'red'})">${num(c.difference) > 0 ? '+' : num(c.difference) < 0 ? '−' : ''}${inr(Math.abs(num(c.difference)))}</b></td><td class="small">${esc(c.note)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No closings in this period.</td></tr>'}
+  </tbody></table></div></div>`;
+};
+function cashLocal(staff, day) {
+  let cashIn = 0, cashOut = 0;
+  (S.db.payments || []).forEach(p => { if (p.staff === staff && p.mode === 'Cash' && String(p.date).slice(0, 10) === day) { if (p.kind === 'Refund') cashOut += num(p.amount); else cashIn += num(p.amount); } });
+  (S.db.finance || []).forEach(f => { if (f.paidBy === staff && f.mode === 'Cash' && String(f.date).slice(0, 10) === day) { if (f.type === 'Other income' || f.type === 'Investment') cashIn += num(f.amount); else cashOut += num(f.amount); } });
+  return { cashIn, cashOut, expected: cashIn - cashOut };
+}
+AFTER.finance = () => {
+  if ((S.finTab || 'pl') !== 'pl' || typeof Chart === 'undefined') return;
+  drawCharts('chPL', null, S.finView);
+};
+function editFin(id, type) {
+  const f = id ? (S.db.finance || []).find(x => x.entryId === id) : { type: type || 'Expense', date: todayIso(), mode: 'Cash', paidBy: S.user.name };
+  const ro = S.user.role === 'Viewer';
+  const m = modal({ title: (id ? '✏️ Edit ' : '＋ ') + esc(f.type), body: `<form id="fFin" class="grid g2">
+    ${fld('Type', sel('type', S.user.role === 'Staff' ? ['Expense'] : S.db.lists.financeTypes, f.type))}${fld('Date', inp('date', String(f.date || '').slice(0, 10), 'type="date" required'), 'req')}
+    ${fld('Category', sel('category', S.db.lists.financeCats, f.category, '—'))}${fld('Amount (₹)', inp('amount', f.amount, 'type="number" min="1" required'), 'req')}
+    ${fld('Description', inp('description', f.description, 'placeholder="e.g. HP ink cartridge, November rent, owner investment"'), 'spanAll')}
+    ${fld('Paid / received by', sel('mode', S.db.lists.paymentModes, f.mode))}${fld('Staff', sel('paidBy', S.db.users.map(u => u.name), f.paidBy))}
+    ${fld('Vendor / from', inp('vendor', f.vendor))}${fld('Wallet (for top-ups)', sel('wallet', (S.db.wallets || []).map(w => w.name), f.wallet, '—'))}
+    ${fld('Bill / photo link (Google Drive)', inp('billLink', f.billLink), 'spanAll')}</form>`,
+    foot: `${id && canManage() ? '<button class="btn red" data-del style="margin-right:auto">🗑 Delete</button>' : ''}<button class="btn" data-x2>Close</button>${ro ? '' : '<button class="btn primary" data-ok>Save</button>'}` });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  const del = m.el.querySelector('[data-del]');
+  if (del) del.onclick = async () => { if (!await confirmBox('Delete this entry?', 'Delete')) return; try { await call('deleteFinance', { entryId: id }); S.db.finance = S.db.finance.filter(x => x.entryId !== id); m.close(); render(); toast('Deleted', 'ok'); } catch (e) { fail(e); } };
+  const ok = m.el.querySelector('[data-ok]');
+  if (ok) ok.onclick = async () => { const fm = $('#fFin', m.el); if (!fm.reportValidity()) return; const d = formData(fm); if (id) d.entryId = id;
+    try { const saved = await call('saveFinance', d); S.db.finance = S.db.finance || []; upsertLocal('finance', 'entryId', saved); m.close(); render(); toast('Saved', 'ok'); } catch (e) { fail(e); } };
+}
+function editWallet(id) {
+  const w = id ? S.db.wallets.find(x => x.walletId === id) : { active: 'Yes', openingDate: todayIso() };
+  const m = modal({ title: id ? 'Edit wallet' : 'Add wallet / portal account', size: 'sm', body: `<form id="fW" class="grid">
+    ${fld('Name', inp('name', w.name, 'required placeholder="e.g. IRCTC agent wallet"'), 'req')}${fld('Portal', inp('portal', w.portal, 'placeholder="IRCTC / AEPS / CSC / RedBus"'))}
+    ${fld('Opening balance (₹)', inp('openingBalance', w.openingBalance, 'type="number"'))}${fld('Balance on date', inp('openingDate', String(w.openingDate || '').slice(0, 10), 'type="date"'))}
+    ${fld('Warn when below (₹)', inp('lowAlert', w.lowAlert, 'type="number"'))}${fld('Active', sel('active', S.db.lists.yesNo, w.active))}${fld('Notes (no passwords)', inp('notes', w.notes))}</form>`,
+    foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => { const f = $('#fW', m.el); if (!f.reportValidity()) return; const d = formData(f); if (id) d.walletId = id;
+    try { const saved = await call('saveWallet', d); S.db.wallets = S.db.wallets || []; upsertLocal('wallets', 'walletId', saved); m.close(); render(); toast('Wallet saved', 'ok'); } catch (e) { fail(e); } };
+}
+function closeCashModal(name) {
+  const c = cashLocal(name, todayIso());
+  const m = modal({ title: '🪙 Close cash — ' + esc(name), size: 'sm', body: `<form id="fCC" class="grid">
+    <div class="alert">Cash in <b>${inr(c.cashIn)}</b> − cash out <b>${inr(c.cashOut)}</b> = should have <b>${inr(c.expected)}</b></div>
+    ${fld('Cash counted in hand (₹)', inp('counted', '', 'type="number" required autofocus'), 'req')}${fld('Note', inp('note', '', 'placeholder="e.g. ₹50 given as change to next day"'))}</form>`,
+    foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save closing</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => { const f = $('#fCC', m.el); if (!f.reportValidity()) return;
+    try { const saved = await call('closeCash', Object.assign(formData(f), { staff: name })); S.db.closings = S.db.closings || []; upsertLocal('closings', 'closingId', saved); m.close(); render();
+      toast(num(saved.difference) === 0 ? 'Cash matches ✔' : (num(saved.difference) > 0 ? 'Extra ' : 'Short ') + inr(Math.abs(num(saved.difference))), num(saved.difference) === 0 ? 'ok' : 'err'); } catch (e) { fail(e); } };
+}
+function exportPL() {
+  const sl = S.sl, r = slRange(sl), view = S.finView || buckets(r).view;
+  const B = buckets(r, view).list.map(x => Object.assign(x, { m: money(slJobs(x.r, sl), slFin(x.r, sl)) }));
+  downloadXlsx([['Period', 'From', 'To', 'Jobs', 'Received', 'Refunded', 'Earned', 'Other income', 'Expenses', 'Purchases', 'Profit / loss']].concat(B.map(x => [x.label, x.r[0], x.r[1], x.m.st.total, x.m.st.received, x.m.st.refunded, x.m.earned, x.m.otherIncome, x.m.expenses, x.m.purchases, x.m.profit])), 'Profit & loss', 'AGS-profit-loss-' + r[0] + '-to-' + r[1] + '.xlsx', [14, 11, 11, 7, 11, 11, 11, 11, 11, 11, 13]);
+}
+function exportPay() {
+  const r = slRange(S.sl), pays = slPay(r, S.sl);
+  downloadXlsx([['Receipt no', 'Date', 'Kind', 'Booking', 'Customer', 'Department', 'Amount', 'Mode', 'Staff']].concat(pays.map(p => [p.receiptNo, p.date, p.kind, p.bookingId, p.customerName, p.department, (p.kind === 'Refund' ? -1 : 1) * num(p.amount), p.mode, p.staff])), 'Receipts', 'AGS-receipts-' + r[0] + '-to-' + r[1] + '.xlsx', [14, 17, 9, 15, 22, 16, 10, 18, 12]);
+}
+
+// ---------------------------------------------------------------- my work (every staff member; the home page for Staff)
+PAGES.mywork = () => {
+  const me = S.user.name, sl = Object.assign({}, S.sl, { staff: me, dept: '', line: '' }), r = slRange(sl);
+  const mine = slJobs(r, sl), st = stats(mine), t = todayIso();
+  const openAll = S.db.bookings.filter(b => b.handledBy === me && PENDING.includes(b.status)).sort((a, b) => String(a.expectedDate || a.preferredDate || a.requestDate).localeCompare(String(b.expectedDate || b.preferredDate || b.requestDate)));
+  const cash = cashLocal(me, t), closed = (S.db.closings || []).find(c => c.staff === me && String(c.date).slice(0, 10) === t);
+  return `
+  ${S.db.defaultPin ? `<div class="banner">You are still using a default password. <a href="#" data-act="go" data-page="settings">Change it in Settings</a>.</div>` : ''}
+  <div class="pageHead"><div><h2>Namaskaram ${esc(me)} 🙏</h2><p>Your work · ${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p></div>
+    <div class="row"><button class="btn primary" data-act="newBooking">＋ New service</button></div></div>
+  ${slicerBar({ noDept: true, noStaff: true })}
+  <div class="kpis">
+    ${kpiBox('My open tasks', openAll.length, 'all dates', '', '')}
+    ${kpiBox('Done', st.booked, 'success ' + st.rate + '%', '', '', 'pos')}
+    ${kpiBox('Failed / not done', st.failed, '', '', '', st.failed ? 'neg' : '')}
+    ${kpiBox('Pending (this period)', st.pending, '', '')}
+    ${kpiBox('I earned for AGS', inr(st.income), 'service charges on my finished work', '', '', 'pos')}
+    ${kpiBox('My cash today', inr(cash.expected), closed ? 'closed · ' + (num(closed.difference) === 0 ? 'matches' : 'difference ' + inr(closed.difference)) : 'not closed yet', '', '', closed ? '' : '')}
+  </div>
+  <div class="card" style="margin-top:16px"><div class="row between wrap"><h3 style="margin:0">My tasks <span class="muted">${openAll.length} open, oldest first</span></h3>
+    <div class="row">${S.user.role !== 'Viewer' ? `<button class="btn sm" data-act="closeCash" data-n="${esc(me)}">🪙 Close my cash</button><button class="btn sm" data-act="editFin" data-id="" data-t="Expense">＋ Expense</button>` : ''}</div></div>
+    ${openAll.length ? `<div class="tableWrap" style="margin-top:10px"><table class="t"><thead><tr><th>Job</th><th>Customer</th><th>Service</th><th>Status</th><th>Due</th><th class="right">Balance</th></tr></thead><tbody>
+    ${openAll.map(b => { const due = b.expectedDate || b.preferredDate; const late = due && due < t; return `<tr class="click" data-act="openBooking" data-id="${esc(b.bookingId)}"><td class="nowrap"><b>${esc(b.bookingId)}</b><div class="muted small">${fD(b.requestDate)}</div></td><td>${esc(b.customerName)}<div class="muted small">${esc(b.mobile)}</div></td><td class="small">${DI(b).icon} ${esc(b.service)}</td><td>${badge(b.status)}</td><td class="nowrap" style="${late ? 'color:var(--red);font-weight:600' : ''}">${fD(due) || '—'}${late ? ' ⚠' : ''}</td><td class="right">${inr(num(b.total) - num(b.received))}</td></tr>`; }).join('')}
+    </tbody></table></div>` : '<div class="alert ok" style="margin-top:10px">No open tasks. 🎉</div>'}</div>
+  <div class="card" style="margin-top:16px"><h3>Finished in this period</h3>
+    ${mine.filter(b => !PENDING.includes(b.status)).length ? `<div class="tableWrap"><table class="t"><thead><tr><th>Job</th><th>Service</th><th>Status</th><th class="right">Earned</th></tr></thead><tbody>${mine.filter(b => !PENDING.includes(b.status)).map(b => `<tr class="click" data-act="openBooking" data-id="${esc(b.bookingId)}"><td><b>${esc(b.bookingId)}</b> <span class="muted small">${esc(b.customerName)}</span></td><td class="small">${esc(b.service)}</td><td>${badge(b.status)}</td><td class="right">${BOOKED.includes(b.status) ? inr(b.serviceCharge) : '—'}</td></tr>`).join('')}</tbody></table></div>` : '<div class="muted small">Nothing finished in this period yet.</div>'}</div>`;
 };
 
 // ---------------------------------------------------------------- bookings list
@@ -851,6 +1136,7 @@ function bookingForm(id, preset) {
     ${fld('Customer name (lead)', inp('customerName', b.customerName, 'required'), 'req')}
     ${fld('Mobile (for WhatsApp)', inp('mobile', b.mobile, 'inputmode="numeric" required pattern="[0-9 +]{10,14}"'), 'req')}
     ${fld('Assign to', sel('handledBy', [['Auto', '⚙️ Auto (least busy)']].concat(S.db.users.filter(u => u.active !== 'No' && u.role !== 'Viewer').map(u => [u.name, u.name + ' · ' + u.role])), b.handledBy || 'Auto'))}
+    ${(S.db.wallets || []).length ? fld('Paid from wallet / portal', sel('walletUsed', S.db.wallets.filter(w => w.active !== 'No').map(w => w.name), b.walletUsed, '— not from a wallet —')) : ''}
     ${fld('Send messages by', sel('contactVia', S.db.lists.contactVias || ['WhatsApp', 'SMS', 'WhatsApp + SMS'], b.contactVia || 'WhatsApp'))}
     ${fld('<span id="lblPeople">Devotees</span>', inp('devotees', b.devotees), 'span2')}
     <input type="hidden" name="customerIds" value="${esc(b.customerIds || '')}"><input type="hidden" name="profile" value="${esc(b.profile || '')}">
@@ -1637,7 +1923,7 @@ function receiptHtml(b) {
       ${s.shopAddress || s.shopPhone ? `<div class="rSub">${esc(s.shopAddress || '')}${s.shopAddress && s.shopPhone ? ' · ' : ''}${s.shopPhone ? '📞 ' + esc(s.shopPhone) : ''}</div>` : ''}
     </div>
     <div class="rTitle"><span class="te">రసీదు</span> · RECEIPT</div>
-    <table class="rMeta"><tr><td><span class="te">రసీదు నం.</span> Receipt No<br><b>${esc(b.bookingId)}</b></td><td class="r"><span class="te">తేదీ</span> Date<br><b>${fD(b.requestDate) || fD(new Date().toISOString())}</b></td></tr></table>
+    <table class="rMeta"><tr><td><span class="te">రసీదు నం.</span> Receipt No<br><b>${esc(b.receiptNo || b.bookingId)}</b>${b.receiptNo ? `<br><small>Job ${esc(b.bookingId)}</small>` : ''}</td><td class="r"><span class="te">తేదీ</span> Date<br><b>${fD(b.requestDate) || fD(new Date().toISOString())}</b></td></tr></table>
     <table class="rTab">
       ${row('పేరు', 'Name', '<b>' + esc(b.customerName) + '</b>')}
       ${row('మొబైల్', 'Mobile', esc(b.mobile || ''))}
@@ -1710,6 +1996,16 @@ const ACT = {
   theme: () => { const cur = store.get('theme'); const nxt = !cur ? (isDark() ? 'light' : 'dark') : cur === 'dark' ? 'light' : null; store.set('theme', nxt); applyTheme(); render(); },
   refresh: async () => { try { S.db = await call('bootstrap'); renderNav(); render(); toast('Refreshed from Google Sheet', 'ok'); } catch (e) { fail(e); } },
   period: el => { S.period = el.dataset.p; render(); },
+  slP: el => { S.sl.p = el.dataset.p; if (S.sl.p === 'custom' && !S.sl.from) { const r = slRange({ p: 'month' }); S.sl.from = r[0]; S.sl.to = todayIso(); } S.finView = ''; render(); },
+  slReset: () => { S.sl = { p: 'month', from: '', to: '', dept: '', staff: '', line: '' }; S.finView = ''; render(); },
+  slStaff: el => { S.sl.staff = el.dataset.n; render(); },
+  finTab: el => { S.finTab = el.dataset.t; if (S.page !== 'finance') go('finance'); else render(); },
+  finView: el => { S.finView = el.dataset.v; render(); },
+  editFin: el => editFin(el.dataset.id, el.dataset.t),
+  editWallet: el => editWallet(el.dataset.id),
+  closeCash: el => closeCashModal(el.dataset.n),
+  exportPL: () => exportPL(),
+  exportPay: () => exportPay(),
   kpiGo: el => { const g = el.dataset.go; S.bf = { q: '', status: '', cat: '', month: '', login: '', when: 'request' }; if (g === 'Booked') S.bf.status = 'booked'; else if (g === 'Not Booked') S.bf.status = 'failed'; else if (g !== 'all') S.bf.status = g; go('bookings'); },
   bstatus: el => { S.bf.status = el.dataset.s; render(); },
   newBooking: () => bookingForm(null),
@@ -1805,6 +2101,7 @@ const ACT = {
   changePin: async () => { try { await call('changePin', formData($('#fPin'))); S.db.defaultPin = false; toast('Password changed', 'ok'); render(); } catch (e) { fail(e); } },
   reloadActivity: async () => { try { S.db.activity = await call('activity', { limit: 500 }); render(); } catch (e) { fail(e); } }
 };
+document.addEventListener('change', e => { const k = e.target.dataset && e.target.dataset.sl; if (!k) return; S.sl[k] = e.target.value; S.finView = ''; render(); });
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]');
   if (!el) return;

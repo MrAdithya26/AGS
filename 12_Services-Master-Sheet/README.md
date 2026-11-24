@@ -1,6 +1,8 @@
-# 12 · AGS Services Master – Sheet edition (v3.0)
+# 12 · AGS Services Master – Sheet edition (v4.0)
 
-> Current shop tool, in daily use until the pro CRM (Next.js + Supabase, `04_Platform-Nextjs-Supabase/crm/`) is ready. Its data will be imported into the pro CRM.
+> The main AGS CRM (decision 24 Nov 2026). The pro CRM (`04_Platform-Nextjs-Supabase/crm/`) is on hold; Sheet data can be imported into it later.
+
+**v4.0:** 26 departments / ~230 online & CSC services (no third-party home services), business dashboard with slicers (today → year, custom range, department, staff, service line), Finance & P/L (expenses, purchases, investments, other income, receipts R-/RF-, wallets, cash closing), staff logins with passwords and 4 roles, auto-assign, My work page, Customer 360, Google Contacts sync.
 
 CRM for **Adithya Internet & CSC Center (Adithya Group of Services)**: TTD, travel, CSC applications and counter services in one Google Sheet + dashboard. Free, runs on the shop's own Google account.
 

@@ -9,15 +9,17 @@ I="$OUT/1-Install (paste into Google Apps Script)"
 cp apps-script/Code.gs "$I/1-Code.gs"; cp apps-script/Index.html "$I/2-Index.html"; cp apps-script/Styles.html "$I/3-Styles.html"
 cp apps-script/App.html "$I/4-App.html"; cp apps-script/appsscript.json "$I/5-appsscript.json"
 cp demo/index.html "$OUT/2-Try-the-demo/AGS-Demo (open in Chrome).html"
-cp ../13_TTD-Assistant-Extension/releases/*.zip "$OUT/3-Optional-TTD-Chrome-Extension/"
+cp "$(ls -1 ../13_TTD-Assistant-Extension/releases/*.zip | sort -V | tail -1)" "$OUT/3-Optional-TTD-Chrome-Extension/"
 cp docs/AGS-Services-Master-Guide.pdf "$OUT/"
 cat > "$OUT/README-FIRST.txt" <<TXT
 AGS SERVICES MASTER v$V  -  Adithya Group of Services
-CRM for TTD, Train/Bus/Flight, Aadhaar, PAN, Voter ID, Certificates and all CSC services.
+CRM + business dashboard for all AGS online and CSC services: TTD, temples, hotels, travel, Aadhaar, PAN,
+certificates, land, schemes, education, jobs, PF, RTO, tax, banking, bills, counter work. Finance, profit / loss, staff logins.
 
 START HERE
   1. Open  AGS-Services-Master-Guide.pdf  (key features, install steps with pictures, daily use, Telugu summary).
-  2. Want to look around first?  Open  2-Try-the-demo  in Chrome. Login: Admin / 1234 (made-up data).
+  2. Want to look around first?  Open  2-Try-the-demo  in Chrome. Login: Admin / 1234, then choose any new password
+     (made-up data). Staff view: ravi / demo123.
   3. Install (one time, ~20 min): follow guide section 3 using the 5 files in  1-Install.
      In Apps Script the files are named  Code, Index, Styles, App  (the numbers only show the order).
   4. Optional: 3-Optional-TTD-Chrome-Extension  only for PCs where you book on the TTD website.
@@ -31,7 +33,11 @@ Paste in this order (guide section 3, step B):
   3-Styles.html      -> + HTML, name it  Styles
   4-App.html         -> + HTML, name it  App
   5-appsscript.json  -> Project Settings > Show "appsscript.json", replace everything
-Then Ctrl+S, run "setup", then Deploy > New deployment > Web app (Me / Anyone).
+Then Ctrl+S, run "setup" (allow the permissions, including Contacts), then
+Deploy > New deployment > Web app (Me / Anyone). First login Admin / 1234, then set your own password.
+
+ALREADY USING v3? Paste the 5 files over the old ones, run "setup" once, then
+Deploy > Manage deployments > Edit > Version: New version > Deploy. Your data stays; new tabs are added.
 TXT
 cat > "$OUT/3-Optional-TTD-Chrome-Extension/README.txt" <<TXT
 Only for PCs where you book on the TTD website. Not needed for other services.

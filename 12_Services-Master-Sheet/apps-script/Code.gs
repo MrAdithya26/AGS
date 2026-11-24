@@ -8,7 +8,7 @@
  *   - answers the dashboard (api) and the Chrome extension (doPost, with an API key)
  */
 var APP = { name: 'AGS Services Master', version: '4.0.0', tz: 'Asia/Kolkata' };
-var SCHEMA_VERSION = '9';   // bump when columns change: sheets are repaired automatically on next use
+var SCHEMA_VERSION = '10';   // bump when columns change: sheets are repaired automatically on next use
 
 // ------------------------------------------------------------------ dropdown lists
 /** Departments: [name, icon, kind, booking-ID prefix]. kind decides the form: ttd | travel | app (tracked work) | quick (counter sale). */
@@ -40,6 +40,10 @@ var LISTS = {
     'Lucky Dip - Not Selected', 'Payment Failed', 'Cancelled', 'Completed', 'Applied', 'In Process', 'Ready to Collect', 'Rejected'],
   paymentStatuses: ['Unpaid', 'Advance Paid', 'Fully Paid'],
   paymentModes: ['Cash', 'UPI / PhonePe / GPay', 'Bank Transfer', 'Card', 'Other'],
+  financeTypes: ['Expense', 'Purchase', 'Investment', 'Other income', 'Owner withdrawal', 'Wallet top-up'],
+  financeCats: ['Rent', 'Electricity', 'Internet & phone', 'Salaries & wages', 'Stationery & printing (paper, ink, toner)', 'Computer & equipment', 'Furniture & fittings',
+    'Software & subscriptions', 'Portal / agent ID fees', 'Repairs & maintenance', 'Travel & fuel', 'Marketing & ads', 'Bank charges', 'Taxes, licences & fees',
+    'Tea & refreshments', 'Loan / EMI', 'Commission received', 'Other'],
   ttdPayments: ['Not Paid', 'Paid to TTD', 'Debited - No Ticket', 'TTD Refunded'],
   refundStatuses: ['Not Applicable', 'Refund Pending', 'Refunded', 'Adjusted to Next Booking'],
   messageStatuses: ['Not Sent', 'Sent', 'Not Needed'],
@@ -115,6 +119,8 @@ var SCHEMA = {
     c('reminderSentOn', 'Reminder SMS Sent On', 'datetime', 130),
     c('handledBy', 'Handled By', 'text', 110),
     c('enteredBy', 'Entered By', 'text', 110),
+    c('receiptNo', 'Receipt No', 'text', 110),
+    c('walletUsed', 'Wallet / Portal Account Used', 'text', 150),
     c('remarks', 'Remarks', 'text', 220),
     c('createdOn', 'Created On', 'datetime', 130),
     c('updatedOn', 'Updated On', 'datetime', 130)
@@ -208,6 +214,56 @@ var SCHEMA = {
     c('value', 'Value', 'text', 360),
     c('about', 'What it is', 'text', 380)
   ]},
+  Payments: { color: '#0F766E', id: 'paymentId', cols: [
+    c('paymentId', 'Payment ID', 'text', 90),
+    c('receiptNo', 'Receipt No', 'text', 120),
+    c('date', 'Date & Time', 'datetime', 140),
+    c('kind', 'Receipt / Refund', 'text', 100),
+    c('bookingId', 'Booking ID', 'text', 120),
+    c('customerName', 'Customer', 'text', 160),
+    c('department', 'Department', 'text', 120),
+    c('amount', 'Amount (₹)', 'money', 100),
+    c('mode', 'Mode', 'text', 130, 'paymentModes'),
+    c('staff', 'Collected / Paid By', 'text', 120),
+    c('note', 'Note', 'text', 220)
+  ]},
+  Finance: { color: '#9A3412', id: 'entryId', cols: [
+    c('entryId', 'Entry ID', 'text', 80),
+    c('date', 'Date', 'date', 100),
+    c('type', 'Type', 'text', 120, 'financeTypes'),
+    c('category', 'Category', 'text', 180, 'financeCats'),
+    c('description', 'Description', 'text', 240),
+    c('amount', 'Amount (₹)', 'money', 100),
+    c('mode', 'Paid / Received By', 'text', 130, 'paymentModes'),
+    c('paidBy', 'Staff', 'text', 110),
+    c('vendor', 'Vendor / From', 'text', 150),
+    c('wallet', 'Wallet (for top-ups)', 'text', 140),
+    c('billLink', 'Bill / Photo Link', 'text', 180),
+    c('createdBy', 'Entered By', 'text', 110),
+    c('createdOn', 'Entered On', 'datetime', 130)
+  ]},
+  Wallets: { color: '#4338CA', id: 'walletId', cols: [
+    c('walletId', 'Wallet ID', 'text', 80),
+    c('name', 'Wallet / Portal Account', 'text', 200),
+    c('portal', 'Portal', 'text', 140),
+    c('openingBalance', 'Opening Balance (₹)', 'money', 120),
+    c('openingDate', 'Opening Date', 'date', 100),
+    c('lowAlert', 'Alert Below (₹)', 'money', 110),
+    c('active', 'Active', 'text', 70, 'yesNo'),
+    c('notes', 'Notes', 'text', 200)
+  ]},
+  'Cash Closing': { color: '#15803D', id: 'closingId', cols: [
+    c('closingId', 'Closing ID', 'text', 90),
+    c('date', 'Date', 'date', 100),
+    c('staff', 'Staff', 'text', 110),
+    c('cashIn', 'Cash Received (₹)', 'money', 110),
+    c('cashOut', 'Cash Paid Out (₹)', 'money', 110),
+    c('expected', 'Cash Expected (₹)', 'money', 110),
+    c('counted', 'Cash Counted (₹)', 'money', 110),
+    c('difference', 'Difference (₹)', 'money', 100),
+    c('note', 'Note', 'text', 220),
+    c('closedOn', 'Closed On', 'datetime', 130)
+  ]},
   'Activity Log': { color: '#334155', id: '', cols: [
     c('time', 'Time', 'datetime', 140),
     c('user', 'User', 'text', 110),
@@ -216,7 +272,7 @@ var SCHEMA = {
     c('details', 'Details', 'text', 520)
   ]}
 };
-var SHEET_ORDER = ['Bookings', 'Customers', 'Services', 'Releases', 'TTD Logins', 'Messages', 'Users', 'Settings', 'Activity Log'];
+var SHEET_ORDER = ['Bookings', 'Customers', 'Payments', 'Finance', 'Wallets', 'Cash Closing', 'Services', 'Releases', 'TTD Logins', 'Messages', 'Users', 'Settings', 'Activity Log'];
 
 var DEFAULT_SETTINGS = [
   ['contactsSync', 'Yes', 'Save every new customer mobile to Google Contacts (label "AGS Customers") - Yes / No'],
@@ -766,9 +822,9 @@ function api(token, action, payload) {
   }
 }
 
-var READ_ONLY = ['bootstrap', 'activity', 'changePin'];
-var MANAGER_OK = ['syncContacts', 'deleteBooking', 'deleteCustomer', 'deleteService', 'runReminders'];
-var ADMIN_ONLY = ['syncContacts', 'deleteBooking', 'deleteCustomer', 'saveUser', 'deleteUser', 'saveSettings', 'newApiKey', 'deleteService', 'testSms', 'runReminders'];
+var READ_ONLY = ['bootstrap', 'activity', 'changePin', 'cashStatus'];
+var MANAGER_OK = ['deleteFinance', 'saveWallet', 'syncContacts', 'deleteBooking', 'deleteCustomer', 'deleteService', 'runReminders'];
+var ADMIN_ONLY = ['deleteFinance', 'saveWallet', 'syncContacts', 'deleteBooking', 'deleteCustomer', 'saveUser', 'deleteUser', 'saveSettings', 'newApiKey', 'deleteService', 'testSms', 'runReminders'];
 
 var ACTIONS = {
   bootstrap: function (p, user) { return bootstrap_(user); },
@@ -781,6 +837,11 @@ var ACTIONS = {
     return saved;
   },
   syncContacts: function (p, user) { return syncContacts_(user); },
+  saveFinance: function (p, user) { if (user.role === 'Staff' && p.type !== 'Expense') throw new Error('Staff can add only expenses'); return saveFinance_(p, user); },
+  deleteFinance: function (p, user) { deleteRecord_('Finance', p.entryId, user); return true; },
+  saveWallet: function (p, user) { return saveWallet_(p, user); },
+  cashStatus: function (p, user) { return cashFor_(p.staff && user.role !== 'Staff' ? p.staff : user.name, p.date || fmt_(new Date(), 'yyyy-MM-dd')); },
+  closeCash: function (p, user) { return closeCash_(p, user); },
   deleteBooking: function (p, user) { deleteRecord_('Bookings', p.bookingId, user); return true; },
   markMessage: function (p, user) { return markSent_(p.bookingId, p.channel || 'WhatsApp', user); },
   sendSms: function (p, user) {
@@ -909,6 +970,10 @@ function bootstrap_(user) {
     settings: settings_(user.role === 'Admin'),
     bookings: readAll_('Bookings').map(clean_),
     customers: readAll_('Customers').map(clean_).map(function (c) { return maskCustomer_(c, user); }),
+    payments: readAll_('Payments').map(clean_).filter(function (x) { return user.role !== 'Staff' || x.staff === user.name; }),
+    finance: user.role === 'Staff' ? readAll_('Finance').map(clean_).filter(function (x) { return x.paidBy === user.name; }) : readAll_('Finance').map(clean_),
+    wallets: readAll_('Wallets').map(clean_),
+    closings: readAll_('Cash Closing').map(clean_).filter(function (x) { return user.role !== 'Staff' || x.staff === user.name; }),
     services: readAll_('Services').map(clean_),
     releases: readAll_('Releases').map(clean_),
     logins: readAll_('TTD Logins').map(clean_),
@@ -1034,12 +1099,27 @@ function saveBooking_(p, user, why) {
     if (rec.status === 'Payment Failed' && !rec.ttdPayment) rec.ttdPayment = 'Debited - No Ticket';
     if (rec.refundStatus === 'Refunded' && !rec.refundDate && !before.refundDate) rec.refundDate = now;
     rec.updatedOn = now;
+    // Money ledger: every increase in "received" gets a receipt number, every refund an RF number.
+    var pays = [], recvNow = 'received' in rec ? Number(rec.received) || 0 : Number(merged.received) || 0;
+    var added = recvNow - (Number(before.received) || 0);
+    if (added !== 0 && ('received' in rec)) pays.push({ kind: added > 0 ? 'Receipt' : 'Correction', amount: added, mode: rec.paymentMode || merged.paymentMode || 'Cash' });
+    if (rec.refundStatus === 'Refunded' && before.refundStatus !== 'Refunded') pays.push({ kind: 'Refund', amount: Number(rec.refundAmount != null && rec.refundAmount !== '' ? rec.refundAmount : merged.refundAmount) || recvNow, mode: rec.refundMode || merged.refundMode || 'Cash' });
+    var bid = rec.bookingId || p.bookingId;
+    pays.forEach(function (x) { if (x.kind !== 'Correction') x.receiptNo = nextReceipt_(now, x.kind === 'Refund' ? 'RF' : 'R'); });
+    var firstR = pays.filter(function (x) { return x.kind === 'Receipt'; })[0];
+    if (firstR && !before.receiptNo) rec.receiptNo = firstR.receiptNo;
     if (ex) {
       writeFields_('Bookings', ex.row, rec);
     } else {
       appendRows_('Bookings', [rec]);
     }
     var saved = clean_(findRow_('Bookings', 'bookingId', rec.bookingId || p.bookingId).obj);
+    if (pays.length) {
+      var nextP = nextSeq_(readColumn_('Payments', 'paymentId'), 'P');
+      appendRows_('Payments', pays.map(function (x) { return { paymentId: 'P' + pad_(nextP++, 5), receiptNo: x.receiptNo || '', date: now, kind: x.kind, bookingId: bid,
+        customerName: saved.customerName, department: saved.department, amount: Math.abs(x.amount) * (x.kind === 'Correction' && x.amount < 0 ? -1 : 1), mode: x.mode, staff: user.name, note: x.kind === 'Correction' ? 'Amount received was corrected' : '' }; }));
+      saved._payments = readAll_('Payments').filter(function (x) { return x.bookingId === bid; }).slice(-pays.length).map(clean_);
+    }
     log_(user, saved.bookingId, why || (ex ? (rec.status && rec.status !== before.status ? 'Status: ' + before.status + ' → ' + rec.status : 'Booking edited') : 'Booking created'),
       ex ? diffText_(before, saved) : (saved.customerName + ' · ' + saved.service + ' · ' + saved.persons + ' person(s)'));
     return saved;
@@ -1105,6 +1185,50 @@ function syncContacts_(user) {
   });
   log_(user, 'Customers', 'Google Contacts sync', n + ' added');
   return n;
+}
+
+function nextReceipt_(now, prefix) {
+  var pre = prefix + '-' + fmt_(now, 'yyMM') + '-', max = 0;
+  readColumn_('Payments', 'receiptNo').forEach(function (id) { id = String(id); if (id.indexOf(pre) === 0) { var n = Number(id.slice(pre.length)); if (n > max) max = n; } });
+  return pre + pad_(max + 1, 4);
+}
+
+// ------------------------------------------------------------------ finance (expenses, purchases, investments, wallets, cash closing)
+function saveFinance_(p, user) {
+  if (!(Number(p.amount) > 0)) throw new Error('Enter an amount');
+  if (LISTS.financeTypes.indexOf(p.type) < 0) throw new Error('Choose a type');
+  var row = { entryId: p.entryId || 'F' + pad_(nextSeq_(readColumn_('Finance', 'entryId'), 'F'), 5), date: p.date || new Date(), type: p.type, category: p.category || '',
+    description: p.description || '', amount: Number(p.amount), mode: p.mode || 'Cash', paidBy: p.paidBy || user.name, vendor: p.vendor || '', wallet: p.wallet || '', billLink: p.billLink || '' };
+  if (!p.entryId) { row.createdBy = user.name; row.createdOn = new Date(); }
+  upsert_('Finance', 'entryId', row);
+  log_(user, row.entryId, p.entryId ? 'Finance entry edited' : 'Finance entry added', row.type + ' · ' + row.category + ' · ₹' + row.amount);
+  return clean_(findRow_('Finance', 'entryId', row.entryId).obj);
+}
+function saveWallet_(p, user) {
+  if (!p.name) throw new Error('Wallet name is required');
+  var row = { walletId: p.walletId || 'W' + pad_(nextSeq_(readColumn_('Wallets', 'walletId'), 'W'), 3), name: p.name, portal: p.portal || '', openingBalance: Number(p.openingBalance) || 0,
+    openingDate: p.openingDate || new Date(), lowAlert: Number(p.lowAlert) || 0, active: p.active || 'Yes', notes: p.notes || '' };
+  upsert_('Wallets', 'walletId', row);
+  log_(user, row.walletId, 'Wallet saved', row.name);
+  return clean_(findRow_('Wallets', 'walletId', row.walletId).obj);
+}
+// Cash a staff member should have in hand for a day: cash receipts - cash refunds - cash expenses they paid.
+function cashFor_(staff, day) {
+  var same = function (d) { return d && fmt_(d instanceof Date ? d : new Date(d), 'yyyy-MM-dd') === day; };
+  var cin = 0, cout = 0;
+  readAll_('Payments').forEach(function (x) { if (x.staff === staff && x.mode === 'Cash' && same(x.date)) { if (x.kind === 'Refund') cout += Number(x.amount) || 0; else cin += Number(x.amount) || 0; } });
+  readAll_('Finance').forEach(function (x) { if (x.paidBy === staff && x.mode === 'Cash' && same(x.date)) { if (x.type === 'Other income' || x.type === 'Investment') cin += Number(x.amount) || 0; else cout += Number(x.amount) || 0; } });
+  return { cashIn: cin, cashOut: cout, expected: cin - cout };
+}
+function closeCash_(p, user) {
+  var staff = p.staff && p.staff !== user.name ? p.staff : user.name;
+  if (staff !== user.name && user.role !== 'Admin' && user.role !== 'Manager') throw new Error('You can close only your own cash');
+  var day = p.date || fmt_(new Date(), 'yyyy-MM-dd');
+  var c = cashFor_(staff, day), counted = Number(p.counted) || 0;
+  var id = 'CC-' + day.replace(/-/g, '') + '-' + String(staff).replace(/\W/g, '').slice(0, 12);
+  upsert_('Cash Closing', 'closingId', { closingId: id, date: day, staff: staff, cashIn: c.cashIn, cashOut: c.cashOut, expected: c.expected, counted: counted, difference: counted - c.expected, note: p.note || '', closedOn: new Date() });
+  log_(user, id, 'Cash closed', staff + ' · expected ₹' + c.expected + ' · counted ₹' + counted);
+  return clean_(findRow_('Cash Closing', 'closingId', id).obj);
 }
 
 function nextBookingId_(now, department) {

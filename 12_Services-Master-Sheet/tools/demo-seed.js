@@ -109,4 +109,33 @@
     var r = ACTIONS.quickSale({ service: q[1], qty: q[2], amount: q[1] === 'Electricity bill' ? 1260 : q[1] === 'Mobile / DTH recharge' ? 299 : q[1] === 'AEPS cash withdrawal' ? 0 : '' }, admin);
     writeFields_('Bookings', findRow_('Bookings', 'bookingId', r.bookingId).row, { requestDate: day(q[0], 13) });
   });
+  // v4 demo: staff, payment dates, expenses, purchases, investment, wallets, cash closing (all made-up)
+  [['Sita', 'Manager', 'sita'], ['Ravi', 'Staff', 'ravi'], ['Kiran K', 'Staff', 'kiran']].forEach(function (u) {
+    appendRows_('Users', [{ name: u[0], role: u[1], userId: u[2], pinHash: hashPin_('demo123'), active: 'Yes', mustChange: 'No' }]);
+  });
+  var staffNames = ['Ravi', 'Kiran K', 'Sita', 'Admin'];
+  readAll_('Bookings').forEach(function (b, i) {
+    writeFields_('Bookings', findRow_('Bookings', 'bookingId', b.bookingId).row, { handledBy: staffNames[i % 4], enteredBy: 'Admin' });
+  });
+  var bk = {}; readAll_('Bookings').forEach(function (b) { bk[b.bookingId] = b; });
+  readAll_('Payments').forEach(function (x) {
+    var b = bk[x.bookingId]; if (!b) return;
+    var d = x.kind === 'Refund' ? (b.refundDate || b.updatedOn) : b.requestDate;
+    writeFields_('Payments', findRow_('Payments', 'paymentId', x.paymentId).row, { date: d, staff: b.handledBy });
+  });
+  var mAgo = function (m, d) { return new Date(now.getFullYear(), now.getMonth() - m, d); };
+  saveFinance_({ type: 'Investment', category: 'Computer & equipment', amount: 85000, mode: 'Bank Transfer', description: 'Owner investment: computers, printer, biometric device', date: mAgo(6, 2) }, admin);
+  saveFinance_({ type: 'Purchase', category: 'Computer & equipment', amount: 18500, mode: 'Bank Transfer', description: 'Laser printer + scanner', vendor: 'Sri Sai Computers', date: mAgo(5, 5) }, admin);
+  for (var mm = 0; mm < 6; mm++) {
+    saveFinance_({ type: 'Expense', category: 'Rent', amount: 4000, mode: 'UPI / PhonePe / GPay', description: 'Shop rent', date: mAgo(mm, 5) }, admin);
+    saveFinance_({ type: 'Expense', category: 'Electricity', amount: 900 + mm * 60, mode: 'Cash', description: 'Shop current bill', date: mAgo(mm, 12) }, admin);
+    saveFinance_({ type: 'Expense', category: 'Internet & phone', amount: 799, mode: 'UPI / PhonePe / GPay', description: 'Broadband', date: mAgo(mm, 8) }, admin);
+    saveFinance_({ type: 'Expense', category: 'Stationery & printing (paper, ink, toner)', amount: 650 + mm * 40, mode: 'Cash', description: 'A4 paper + toner', date: mAgo(mm, 18) }, admin);
+    saveFinance_({ type: 'Other income', category: 'Commission received', amount: 1200 + mm * 150, mode: 'Bank Transfer', description: 'Portal commission', date: mAgo(mm, 25) }, admin);
+  }
+  saveWallet_({ name: 'IRCTC agent wallet', portal: 'IRCTC', openingBalance: 6000, openingDate: mAgo(1, 1), lowAlert: 2000 }, admin);
+  saveWallet_({ name: 'AEPS / CSC wallet', portal: 'CSC', openingBalance: 2500, openingDate: mAgo(1, 1), lowAlert: 1000 }, admin);
+  saveFinance_({ type: 'Wallet top-up', category: 'Other', amount: 3000, mode: 'UPI / PhonePe / GPay', wallet: 'IRCTC agent wallet', description: 'Top-up', date: day(3) }, admin);
+  writeFields_('Bookings', findRow_('Bookings', 'bookingId', tr.bookingId).row, { walletUsed: 'IRCTC agent wallet' });
+  closeCash_({ staff: 'Ravi', counted: cashFor_('Ravi', fmt_(new Date(), 'yyyy-MM-dd')).expected }, admin);
 })();
