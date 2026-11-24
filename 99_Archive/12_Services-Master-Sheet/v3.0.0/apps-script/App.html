@@ -1,0 +1,1781 @@
+<script>
+/* AGS Services Master — dashboard (runs in the browser, talks to Code.gs through google.script.run). */
+(function () {
+'use strict';
+
+// ================================================================ helpers
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const todayIso = () => iso(new Date());
+const toD = s => { if (!s) return null; const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/); return m ? new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : null; };
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const fD = s => { const d = toD(s); return d ? pad(d.getDate()) + ' ' + MON[d.getMonth()] + ' ' + d.getFullYear() : ''; };
+const fDT = s => { const d = toD(s); return d ? fD(s) + (String(s).length > 10 ? ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) : '') : ''; };
+const fDmsg = s => { const d = toD(s); return d ? pad(d.getDate()) + '-' + pad(d.getMonth() + 1) + '-' + d.getFullYear() + ' (' + DAY[d.getDay()] + ')' : '-'; };
+const num = v => Number(v) || 0;
+const inr = v => '₹' + num(v).toLocaleString('en-IN');
+const ym = d => d.getFullYear() + '-' + pad(d.getMonth() + 1);
+const ymLabel = k => { const [y, m] = k.split('-'); return MON[m - 1] + ' ' + y; };
+const daysBetween = (a, b) => Math.round((toD(b) - toD(a)) / 86400000);
+const sCls = s => 's-' + String(s || '').replace(/[^A-Za-z]/g, '');
+const badge = s => s ? `<span class="badge ${sCls(s)}">${esc(s)}</span>` : '';
+const rBadge = s => s && s !== 'Not Applicable' ? `<span class="badge nodot r-${String(s).replace(/[^A-Za-z]/g, '')}">${esc(s)}</span>` : '<span class="muted small">—</span>';
+const initials = n => String(n || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+const digits = v => String(v || '').replace(/\D/g, '');
+const maskId = v => { const s = String(v || '').replace(/\s/g, ''); return s.length > 4 ? '•••• ' + s.slice(-4) : s; };
+const ageOf = dob => { const m = String(dob || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (!m) return ''; const b = new Date(+m[3], m[2] - 1, +m[1]); const t = new Date(); let a = t.getFullYear() - b.getFullYear(); if (t < new Date(t.getFullYear(), b.getMonth(), b.getDate())) a--; return a; };
+const store = { get(k) { try { return localStorage.getItem('ttdm_' + k); } catch (e) { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem('ttdm_' + k) : localStorage.setItem('ttdm_' + k, v); } catch (e) { /* private mode */ } } };
+
+const BOOKED = ['Booked', 'Completed', 'Lucky Dip - Selected'];
+// Departments come from the server: [name, icon, kind, prefix]; kind = ttd | travel | app | quick.
+const DI = x => { const n = typeof x === 'string' ? x : (x && x.department) || 'TTD'; const d = ((S.db && S.db.depts) || []).find(r => r[0] === n); return d ? { name: d[0], icon: d[1], kind: d[2] } : { name: 'TTD', icon: '🛕', kind: 'ttd' }; };
+const deptOpts = filter => ((S.db && S.db.depts) || []).filter(d => !filter || filter(d)).map(d => [d[0], d[1] + ' ' + d[0]]);
+const TRAVEL = {
+  Train: { ops: ['IRCTC'], classes: ['SL', '3A', '3E', '2A', '1A', 'CC', 'EC', '2S'], no: 'Train no', icon: '🚆' },
+  Bus: { ops: ['APSRTC', 'TGSRTC', 'Private operator'], classes: ['Seater', 'Sleeper', 'AC Seater', 'AC Sleeper'], no: 'Bus / service no', icon: '🚌' },
+  Flight: { ops: ['IndiGo', 'Air India', 'Air India Express', 'Akasa Air', 'SpiceJet'], classes: ['Economy', 'Premium Economy', 'Business'], no: 'Flight no', icon: '✈️' }
+};
+const route = b => b.fromPlace || b.toPlace ? esc(b.fromPlace || '?') + ' → ' + esc(b.toPlace || '?') : '';
+const needsMsg = b => b.messageStatus !== 'Sent' && b.messageStatus !== 'Not Needed' && b.status !== 'Cancelled';
+const FAILED = ['Not Booked', 'Lucky Dip - Not Selected', 'Payment Failed', 'Rejected'];
+const PENDING = ['Requested', 'Attempting', 'Lucky Dip - Registered', 'Applied', 'In Process', 'Ready to Collect'];
+const APP_OPEN = ['Requested', 'Applied', 'In Process'];
+const overdue = (b, t) => DI(b).kind === 'app' && APP_OPEN.includes(b.status) && b.expectedDate && b.expectedDate < t;
+const CAT_ICON = { 'Darshan': '🛕', 'Arjitha Seva': '🪔', 'Angapradakshinam': '🙇', 'Homam': '🔥', 'Accommodation': '🏨', 'Virtual Seva': '📺', 'Donation': '💝', 'Other': '📿' };
+const SERIES = { light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'], dark: ['#3987e5', '#d95926', '#199e70', '#c98500'] };
+const GROUPS = [['ttd', 'TTD'], ['travel', 'Travel'], ['app', 'Applications'], ['quick', 'Counter & bills']];
+const COLORS = { booked: '#0F9D6B', failed: '#D33A3A', pending: '#EA7A12', other: '#94A3B8', maroon: '#7B1E1E', gold: '#D9A520', blue: '#2F6FDB', violet: '#7C4DDB' };
+const CAT_COLORS = ['#7B1E1E', '#EA7A12', '#D9A520', '#0F9D6B', '#2F6FDB', '#7C4DDB', '#D2447F', '#64748B'];
+
+// ================================================================ state & server
+const S = { token: store.get('token'), user: null, db: null, page: 'dashboard', period: 'month', charts: [], lang: 'Telugu',
+  bf: { q: '', status: '', cat: '', month: '', login: '', when: 'request' }, prof: null, custQ: '', msgKey: 'booked', relMonth: ym(new Date()), boardCat: '', rep: 'month', showIds: false, chan: null, tplChan: 'wa' };
+let busy = 0;
+function loading(d) { busy += d; let el = $('.loading'); if (busy > 0 && !el) { el = document.createElement('div'); el.className = 'loading'; document.body.appendChild(el); } if (busy <= 0 && el) el.remove(); }
+
+function call(action, payload) {
+  return new Promise((resolve, reject) => {
+    loading(1);
+    google.script.run
+      .withSuccessHandler(r => {
+        loading(-1);
+        if (r && r.ok) return resolve(r.data);
+        if (r && r.error === 'SESSION') { logout(true); return reject(new Error('Session expired. Please log in again.')); }
+        reject(new Error(r ? (r.message || r.error) : 'No response from server'));
+      })
+      .withFailureHandler(e => { loading(-1); reject(e instanceof Error ? e : new Error(String(e && e.message || e))); })
+      .api(S.token, action, payload || {});
+  });
+}
+function toast(msg, type) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || '');
+  t.textContent = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(() => t.remove(), type === 'err' ? 6000 : 3500);
+}
+const fail = e => toast(e.message || String(e), 'err');
+function upsertLocal(listName, key, rec) {
+  const list = S.db[listName];
+  const i = list.findIndex(x => String(x[key]) === String(rec[key]));
+  if (i >= 0) list[i] = rec; else list.push(rec);
+}
+function pushActivity(ref, action, details) {
+  S.db.activity.unshift({ time: iso(new Date()) + ' ' + pad(new Date().getHours()) + ':' + pad(new Date().getMinutes()), user: S.user.name, ref, action, details: details || '' });
+}
+
+// ================================================================ theme
+function applyTheme() { const t = store.get('theme'); if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme'); }
+applyTheme();
+const isDark = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+
+// ================================================================ login
+function renderLogin(msg) {
+  $('#app').innerHTML = `<div class="loginWrap"><div class="loginCard">
+    <div class="logo">AGS</div>
+    <h1>AGS Services Master</h1>
+    <div class="muted small">Adithya Internet &amp; CSC Center · Adithya Group of Services</div>
+    <form id="loginForm">
+      <label class="f"><span>Your name</span><input class="i" name="name" value="${esc(store.get('lastUser') || 'Admin')}" autocomplete="username" required></label>
+      <label class="f"><span>PIN</span><input class="i" name="pin" type="password" inputmode="numeric" autocomplete="current-password" required autofocus></label>
+      <button class="btn primary" style="justify-content:center;padding:11px">Log in</button>
+      <div class="small" id="loginMsg" style="color:var(--red);min-height:18px">${esc(msg || '')}</div>
+      <div class="small muted">First time? Name <b>Admin</b>, PIN <b>1234</b> — change it right after logging in.</div>
+    </form></div></div>`;
+  $('#loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.target;
+    const btn = f.querySelector('button');
+    btn.disabled = true; btn.textContent = 'Checking…';
+    try {
+      const r = await call('login', { name: f.name.value.trim(), pin: f.pin.value });
+      S.token = r.token; store.set('token', r.token); store.set('lastUser', r.user.name);
+      await boot();
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Log in';
+      $('#loginMsg').textContent = err.message;
+    }
+  });
+}
+function logout(expired) { store.set('token', null); S.token = null; S.db = null; renderLogin(expired ? 'Session expired. Please log in again.' : ''); }
+
+async function boot() {
+  $('#app').innerHTML = '<div class="spinner"></div>';
+  try {
+    S.db = await call('bootstrap');
+    S.user = S.db.user;
+    S.lang = S.db.settings.defaultLanguage === 'English' ? 'English' : 'Telugu';
+    renderShell();
+    const h = location.hash.slice(1);
+    go(PAGES[h] ? h : 'dashboard');
+  } catch (e) {
+    if (S.token) renderLogin(e.message); else renderLogin();
+  }
+}
+
+// ================================================================ shell & routing
+// Line icons (24px grid, stroke = currentColor).
+const ICONS = {
+  dashboard: '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  bookings: '<path d="M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/>',
+  board: '<rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="11" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/>',
+  customers: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.4 3.6 5.2"/>',
+  services: '<path d="M4 7h16M4 12h16M4 17h10"/>',
+  releases: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  logins: '<circle cx="8" cy="14" r="4"/><path d="m11 11 9-9M17 5l2 2M15 7l2 2"/>',
+  messages: '<path d="M4 5h16v11H9l-5 4z"/>',
+  reports: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  activity: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', plus: '<path d="M12 5v14M5 12h14"/>'
+};
+const svg = (k, cls) => `<svg class="ic ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[k] || ''}</svg>`;
+const NAV = [
+  ['sep', 'Overview'], ['dashboard', 'dashboard', 'Dashboard'], ['reports', 'reports', 'Reports'],
+  ['sep', 'Work'], ['bookings', 'bookings', 'Bookings & orders'], ['customers', 'customers', 'Customers'], ['messages', 'messages', 'Message templates'],
+  ['sep', 'TTD desk'], ['board', 'board', 'Release day board'], ['releases', 'releases', 'Release calendar'], ['logins', 'logins', 'TTD logins'],
+  ['sep', 'Admin'], ['services', 'services', 'Services & prices'], ['activity', 'activity', 'Activity log'], ['settings', 'settings', 'Settings']
+];
+function renderShell() {
+  $('#app').innerHTML = `<div class="shell">
+    <aside class="side" id="side">
+      <div class="brand"><div class="logo">AGS</div><div><b>AGS Services Master</b><small>Adithya Group of Services</small></div></div>
+      <nav class="nav" id="nav"></nav>
+      <div class="foot">
+        <div>Logged in as <b>${esc(S.user.name)}</b> · ${esc(S.user.role)}</div>
+        <div class="row" style="margin-top:8px"><button data-act="theme">🌓 Theme</button><button data-act="refresh">↻ Refresh</button><button data-act="logout">⎋ Logout</button></div>
+        <div style="margin-top:10px;opacity:.7">Adithya Internet &amp; CSC Center<br>Adithya Group of Services</div>
+      </div>
+    </aside>
+    <div class="main">
+      <header class="top">
+        <button class="hamb" data-act="menu" aria-label="Menu">☰</button>
+        <div><h1 id="pageTitle"></h1><div class="om te">ఓం నమో వేంకటేశాయ 🙏</div></div>
+        <div class="search"><input id="gsearch" placeholder="Search name, mobile, booking no…" autocomplete="off"><div id="gres" class="searchRes hide"></div></div>
+        <button class="btn" data-act="quickSale" title="Bill payment, recharge, xerox: one-line sale">${svg('bolt')}<span class="hideM">Quick sale</span></button>
+        <button class="btn primary" data-act="newBooking">${svg('plus')}New booking</button>
+      </header>
+      <main class="content" id="content"></main>
+    </div></div>`;
+  renderNav();
+  const gs = $('#gsearch');
+  gs.addEventListener('input', () => globalSearch(gs.value));
+  gs.addEventListener('blur', () => setTimeout(() => $('#gres').classList.add('hide'), 200));
+}
+function renderNav() {
+  const pend = S.db.bookings.filter(b => PENDING.includes(b.status)).length;
+  const live = S.db.bookings.filter(b => DI(b).kind === 'ttd' && (b.status === 'Requested' || b.status === 'Attempting')).length;
+  $('#nav').innerHTML = NAV.map(n => n[0] === 'sep' ? `<div class="sep">${n[1]}</div>` :
+    `<button data-act="go" data-page="${n[0]}" class="${S.page === n[0] ? 'on' : ''}"><span class="ic">${svg(n[1])}</span>${n[2]}${n[0] === 'bookings' && pend ? `<span class="count">${pend}</span>` : ''}${n[0] === 'board' && live ? `<span class="count">${live}</span>` : ''}</button>`).join('');
+}
+function go(page) {
+  S.page = page;
+  try { history.replaceState(null, '', '#' + page); } catch (e) { /* sandboxed */ }
+  const n = NAV.find(x => x[0] === page);
+  $('#pageTitle').textContent = n ? n[2] : '';
+  $('#side').classList.remove('open');
+  renderNav();
+  render();
+}
+// Professional look: strip decorative emoji from the start of buttons, chips, headings and table headers.
+// Customer messages (textareas) and receipts are never touched.
+const EMO = /^[\s\p{Extended_Pictographic}\uFE0F\u200D\u20E3]+/u;
+function declutter(root) {
+  if (!root) return;
+  root.querySelectorAll('.btn, .chip, .alert, .card h3, .dSec h4, .mHead h2, .kpi .lbl, table.t th, .cat, .seg button, label.f > span, .kcol h4, .nav .sep').forEach(el => {
+    const tn = [...el.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+    if (!tn || el.closest('.rcpt')) return;
+    const out = tn.textContent.replace(EMO, '');
+    if (out.trim() && out !== tn.textContent) tn.textContent = (tn === el.firstChild ? '' : ' ') + out.trimStart();
+  });
+}
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList && n.classList.contains('overlay')) declutter(n); }))).observe(document.body, { childList: true });
+function render() {
+  S.charts.forEach(c => c.destroy());
+  S.charts = [];
+  const el = $('#content');
+  el.innerHTML = PAGES[S.page]();
+  declutter(el);
+  if (AFTER[S.page]) AFTER[S.page]();
+  window.scrollTo(0, 0);
+}
+
+// ================================================================ derived data
+const profiles = () => {
+  const map = new Map();
+  for (const c of S.db.customers) {
+    const k = String(c.profile || c.name || '').trim();
+    if (!map.has(k)) map.set(k, { name: k, members: [], contact: null });
+    const p = map.get(k);
+    p.members.push(c);
+    if (!p.contact && c.mobile) p.contact = c;
+  }
+  for (const p of map.values()) if (!p.contact) p.contact = p.members[0];
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+};
+const serviceByName = n => S.db.services.find(s => s.name === n);
+function upcomingReleases(cat) {
+  const now = Date.now();
+  return S.db.releases.map(r => Object.assign({ t: releaseTime(r) }, r)).filter(r => r.t && r.t > now - 3600000 && (!cat || r.category === cat)).sort((a, b) => a.t - b.t);
+}
+function releaseTime(r) { const d = toD(r.releaseDate); if (!d) return 0; const [h, m] = String(r.releaseTime || '00:00').split(':'); d.setHours(+h || 0, +m || 0); return d.getTime(); }
+function periodRange(p) {
+  const t = new Date(), y = t.getFullYear(), m = t.getMonth();
+  switch (p) {
+    case 'month': return [iso(new Date(y, m, 1)), iso(new Date(y, m + 1, 0))];
+    case 'last': return [iso(new Date(y, m - 1, 1)), iso(new Date(y, m, 0))];
+    case 'q': return [iso(new Date(y, m - 2, 1)), iso(new Date(y, m + 1, 0))];
+    case 'year': return [iso(new Date(y, 0, 1)), iso(new Date(y, 11, 31))];
+    default: return ['0000-00-00', '9999-12-31'];
+  }
+}
+const inRange = (s, r) => { const d = String(s || '').slice(0, 10); return d >= r[0] && d <= r[1]; };
+function stats(list) {
+  const o = { total: list.length, booked: 0, failed: 0, pending: 0, cancelled: 0, persons: 0, received: 0, refunded: 0, refundPending: 0, refundPendingN: 0, income: 0, ticket: 0, ttdStuck: 0 };
+  for (const b of list) {
+    if (BOOKED.includes(b.status)) { o.booked++; o.income += num(b.serviceCharge); o.ticket += num(b.ticketAmount); o.persons += num(b.persons); }
+    else if (FAILED.includes(b.status)) o.failed++;
+    else if (PENDING.includes(b.status)) o.pending++;
+    else o.cancelled++;
+    o.received += num(b.received);
+    if (b.refundStatus === 'Refunded') o.refunded += num(b.refundAmount);
+    if (b.refundStatus === 'Refund Pending') { o.refundPending += num(b.refundAmount) || num(b.received); o.refundPendingN++; }
+    if (b.ttdPayment === 'Debited - No Ticket') o.ttdStuck++;
+  }
+  o.net = o.received - o.refunded;
+  o.rate = o.booked + o.failed ? Math.round(o.booked * 100 / (o.booked + o.failed)) : 0;
+  return o;
+}
+
+// ================================================================ messages (same rules as the server)
+function pickTemplate(b) {
+  const kind = DI(b).kind;
+  if (kind === 'travel') return BOOKED.includes(b.status) ? 'travel_booked' : b.status === 'Not Booked' || b.status === 'Payment Failed' ? 'travel_not_booked' : b.status === 'Cancelled' ? 'travel_cancelled' : 'travel_received';
+  if (kind === 'app' || kind === 'quick') {
+    const appKeys = { 'Applied': 'app_applied', 'In Process': 'app_in_process', 'Ready to Collect': 'app_ready', 'Rejected': 'app_rejected' };
+    if (appKeys[b.status]) return appKeys[b.status];
+    if (b.status === 'Completed' || b.status === 'Booked') return 'order_completed';
+    if (b.status === 'Requested' || b.status === 'Attempting') return 'order_received';
+  }
+  switch (b.status) {
+    case 'Requested': case 'Attempting': return 'request_received';
+    case 'Booked': case 'Completed': return b.category === 'Accommodation' ? 'booked_room' : 'booked';
+    case 'Not Booked': return b.refundStatus === 'Refunded' ? 'not_booked_refunded' : b.refundStatus === 'Adjusted to Next Booking' ? 'not_booked_adjusted' : 'not_booked_refund_pending';
+    case 'Lucky Dip - Registered': return 'dip_registered';
+    case 'Lucky Dip - Selected': return 'dip_selected';
+    case 'Lucky Dip - Not Selected': return 'dip_not_selected';
+    case 'Payment Failed': return 'payment_failed';
+    case 'Cancelled': return 'cancelled';
+    default: return 'request_received';
+  }
+}
+function buildMsg(b, key, lang, chan) {
+  const tpl = S.db.messages.find(m => m.key === key) || {};
+  const en = lang === 'English';
+  const text = chan === 'sms'
+    ? String((en ? tpl.smsEnglish : tpl.smsTelugu) || (en ? tpl.english : tpl.telugu) || tpl.smsTelugu || tpl.telugu || '')
+    : String((en ? tpl.english : tpl.telugu) || tpl.telugu || '');
+  const st = S.db.settings;
+  const v = {};
+  Object.keys(b).forEach(k => { v[k] = b[k] === '' || b[k] == null ? '-' : String(b[k]); });
+  ['preferredDate', 'alternateDate', 'releaseDate', 'serviceDate', 'checkIn', 'checkOut', 'refundDate'].forEach(k => { v[k] = fDmsg(b[k]); });
+  ['ticketAmount', 'serviceCharge', 'total', 'received', 'refundAmount'].forEach(k => { v[k] = num(b[k]).toLocaleString('en-IN'); });
+  v.name = String(b.customerName || '-').split(',')[0];
+  v.balance = Math.max(0, num(b.total) - num(b.received)).toLocaleString('en-IN');
+  if (b.expectedDate) v.expectedDate = fDmsg(b.expectedDate);
+  v.route = b.fromPlace || b.toPlace ? (b.fromPlace || '?') + ' → ' + (b.toPlace || '?') : '-';
+  const nr = upcomingReleases(b.category)[0];
+  v.nextRelease = nr ? fDmsg(nr.releaseDate) + ' ' + (nr.releaseTime || '') : (lang === 'English' ? 'after TTD announcement' : 'TTD ప్రకటన తర్వాత');
+  ['shopName', 'shopNameTe', 'groupName', 'groupNameTe', 'shopPhone', 'shopAddress'].forEach(k => { v[k] = st[k] || ''; });
+  const out = text.replace(/\{(\w+)\}/g, (m, k) => k in v ? v[k] : m).replace(/\n📞\s*$/, '');
+  return chan === 'sms' ? out.replace(/[*]/g, '').replace(/\s+$/, '') : out;
+}
+const smsReady = () => { const p = S.db.settings.smsProvider || ''; return !!p && !/^None/.test(p); };
+const smsInfo = t => { const uni = /[^\x00-\x7F]/.test(t); const n = t.length; const parts = uni ? (n <= 70 ? 1 : Math.ceil(n / 67)) : (n <= 160 ? 1 : Math.ceil(n / 153)); return `${n} characters · ${uni ? 'Telugu/Unicode' : 'English'} · <b>${parts} SMS</b>`; };
+const smsHref = (mobile, text) => 'sms:' + digits(mobile).slice(-10) + '?body=' + encodeURIComponent(text);
+const viaIcon = b => b.messageStatus === 'Not Needed' ? '<span class="muted" title="No message needed">—</span>' : b.messageStatus !== 'Sent' ? '<span title="Not sent">🕓</span>' : `<span title="Sent by ${esc(b.messageVia || 'WhatsApp')}">✅${/SMS/.test(b.messageVia || '') ? '📱' : ''}${/WhatsApp/.test(b.messageVia || 'WhatsApp') ? '💬' : ''}</span>`;
+const waUrl = (mobile, text) => { let m = digits(mobile); if (m.length === 10) m = '91' + m; return 'https://wa.me/' + m + '?text=' + encodeURIComponent(text); };
+
+// ================================================================ modal / drawer
+function modal(opts) {
+  const ov = document.createElement('div');
+  ov.className = 'overlay center';
+  ov.innerHTML = `<div class="modal ${opts.size || ''}" role="dialog" aria-modal="true">
+    <div class="mHead"><h2>${opts.title}</h2><button class="iconBtn" data-x style="margin-left:auto" aria-label="Close">✕</button></div>
+    <div class="mBody">${opts.body}</div>${opts.foot ? `<div class="mFoot">${opts.foot}</div>` : ''}</div>`;
+  const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
+  ov.querySelector('[data-x]').addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(ov);
+  const first = ov.querySelector('input:not([type=hidden]):not([readonly]), select, textarea');
+  if (first && !opts.noFocus) setTimeout(() => first.focus(), 30);
+  if (opts.onMount) opts.onMount(ov, close);
+  return { el: ov, close };
+}
+function drawer(html, onMount) {
+  closeDrawer();
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.id = 'drawerOv';
+  ov.innerHTML = `<div class="drawer">${html}</div>`;
+  ov.addEventListener('mousedown', e => { if (e.target === ov) closeDrawer(); });
+  document.body.appendChild(ov);
+  if (onMount) onMount(ov);
+  return ov;
+}
+function closeDrawer() { const d = $('#drawerOv'); if (d) d.remove(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('.overlay.center')) closeDrawer(); });
+function formData(form) {
+  const o = {};
+  $$('[name]', form).forEach(el => { if (el.type === 'checkbox') o[el.name] = el.checked; else o[el.name] = el.value.trim ? el.value.trim() : el.value; });
+  return o;
+}
+const opt = (list, cur, blank) => (blank != null ? `<option value="">${esc(blank)}</option>` : '') + list.map(v => { const [val, lbl] = Array.isArray(v) ? v : [v, v]; return `<option value="${esc(val)}" ${String(val) === String(cur) ? 'selected' : ''}>${esc(lbl)}</option>`; }).join('');
+const fld = (label, html, cls) => `<label class="f ${cls || ''}"><span>${label}</span>${html}</label>`;
+const inp = (name, val, attrs) => `<input class="i" name="${name}" value="${esc(val == null ? '' : val)}" ${attrs || ''}>`;
+const sel = (name, list, cur, blank, attrs) => `<select class="i" name="${name}" ${attrs || ''}>${opt(list, cur, blank)}</select>`;
+function confirmBox(text, okLabel) {
+  return new Promise(res => {
+    const m = modal({ title: 'Please confirm', size: 'sm', body: `<p style="margin:0">${text}</p>`, noFocus: true,
+      foot: `<button class="btn" data-no>Cancel</button><button class="btn red" data-yes>${okLabel || 'Yes'}</button>` });
+    m.el.querySelector('[data-no]').onclick = () => { m.close(); res(false); };
+    m.el.querySelector('[data-yes]').onclick = () => { m.close(); res(true); };
+  });
+}
+
+// Income by department for a list, plus today's takings (quick sales included).
+function deptRows(list) {
+  const m = new Map();
+  list.forEach(b => { const d = DI(b).name; if (!m.has(d)) m.set(d, []); m.get(d).push(b); });
+  return [...m.entries()].map(([d, v]) => [d, stats(v)]).sort((a, b) => b[1].received - a[1].received);
+}
+function deptCard(list, t) {
+  const today = S.db.bookings.filter(b => String(b.requestDate).slice(0, 10) === t);
+  const ts = stats(today), qs = today.filter(b => DI(b).kind === 'quick');
+  const rows = deptRows(list);
+  const max = Math.max(1, ...rows.map(r => r[1].received));
+  return `<div class="card" style="margin-top:16px"><div class="row between wrap"><h3 style="margin:0">By department</h3>
+    <span class="small">Today: <b>${inr(ts.received)}</b> received · ${today.length} entries · ${qs.length} quick sales (${inr(stats(qs).received)})</span></div>
+    ${rows.length ? `<div class="tableWrap" style="margin-top:10px"><table class="t"><thead><tr><th>Department</th><th class="right">Entries</th><th class="right">Done</th><th class="right">Pending</th><th>Received</th><th class="right">Service income</th></tr></thead><tbody>
+    ${rows.map(([d, x]) => `<tr class="click" data-act="deptGo" data-d="${esc(d)}"><td><b>${esc(d)}</b></td><td class="right">${x.total}</td><td class="right">${x.booked}</td><td class="right">${x.pending}</td>
+      <td><div class="row" style="gap:8px"><div style="height:8px;border-radius:4px;background:var(--accent);opacity:.75;width:${Math.round(x.received * 120 / max)}px"></div><span class="nowrap">${inr(x.received)}</span></div></td><td class="right">${inr(x.income)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<div class="muted small" style="margin-top:8px">No entries in this period.</div>'}</div>`;
+}
+// ================================================================ pages
+const PAGES = {}, AFTER = {};
+
+// ---------------------------------------------------------------- dashboard
+function prevRange(p) {
+  const t = new Date(), y = t.getFullYear(), m = t.getMonth();
+  switch (p) {
+    case 'month': return [iso(new Date(y, m - 1, 1)), iso(new Date(y, m - 1, Math.min(t.getDate(), new Date(y, m, 0).getDate())))];
+    case 'last': return [iso(new Date(y, m - 2, 1)), iso(new Date(y, m - 1, 0))];
+    case 'q': return [iso(new Date(y, m - 5, 1)), iso(new Date(y, m - 2, 0))];
+    case 'year': return [iso(new Date(y - 1, 0, 1)), iso(new Date(y - 1, t.getMonth(), t.getDate()))];
+    default: return null;
+  }
+}
+const delta = (cur, old) => {
+  if (old == null) return '';
+  if (!old) return cur ? '<span class="delta up">new</span>' : '';
+  const p = Math.round((cur - old) * 100 / Math.abs(old));
+  return `<span class="delta ${p > 0 ? 'up' : p < 0 ? 'down' : 'flat'}">${p > 0 ? '▲' : p < 0 ? '▼' : ''} ${Math.abs(p)}%</span>`;
+};
+const seriesColors = () => SERIES[isDark() ? 'dark' : 'light'];
+PAGES.dashboard = () => {
+  const r = periodRange(S.period), pr = prevRange(S.period);
+  const list = S.db.bookings.filter(b => inRange(b.requestDate, r));
+  const prev = pr ? S.db.bookings.filter(b => inRange(b.requestDate, pr)) : null;
+  const st = stats(list), sp = prev ? stats(prev) : {};
+  const all = S.db.bookings, t = todayIso(), in7 = iso(new Date(Date.now() + 7 * 86400000));
+  const open = all.filter(b => PENDING.includes(b.status));
+  const periods = [['month', 'This month'], ['last', 'Last month'], ['q', '3 months'], ['year', 'This year'], ['all', 'All time']];
+  const vs = { month: 'vs same days last month', last: 'vs month before', q: 'vs previous 3 months', year: 'vs same time last year' }[S.period] || '';
+  const kpi = (lbl, val, sub, d, go) => `<div class="kpi" ${go ? `data-act="kpiGo" data-go="${go}"` : ''}><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${d || ''}${sub}</div></div>`;
+  const q = [
+    ['critical', 'Refunds to give', all.filter(b => b.refundStatus === 'Refund Pending').length, 'refund'],
+    ['critical', 'Applications past expected date', all.filter(b => overdue(b, t)).length, 'overdue'],
+    ['critical', 'TTD debited, no ticket', all.filter(b => b.ttdPayment === 'Debited - No Ticket').length, 'stuck'],
+    ['warning', 'Customers not yet messaged', all.filter(needsMsg).length, 'unsent'],
+    ['warning', 'Requests past preferred date', all.filter(b => b.status === 'Requested' && b.preferredDate && b.preferredDate < t).length, 'stale'],
+    ['info', 'Ready to collect: call customer', all.filter(b => b.status === 'Ready to Collect').length, 'Ready to Collect'],
+    ['info', 'Darshan / journey in next 2 days', all.filter(b => BOOKED.includes(b.status) && !b.reminderSentOn && b.serviceDate && daysBetween(t, b.serviceDate) >= 0 && daysBetween(t, b.serviceDate) <= 2).length, 'remind']
+  ].filter(x => x[2]);
+  const qc = { critical: 'var(--red)', warning: 'var(--amber)', info: 'var(--accent)' };
+  const qLbl = { critical: 'Urgent', warning: 'Follow up', info: 'Today' };
+  const soon = all.filter(b => PENDING.concat(['Booked']).includes(b.status)).map(b => {
+    const d = DI(b).kind === 'app' ? b.expectedDate : (b.status === 'Booked' ? (b.serviceDate || b.checkIn) : '');
+    return d && d >= t && d <= in7 ? [d, b] : null; }).filter(Boolean).sort((a, b) => a[0].localeCompare(b[0])).slice(0, 7);
+  const rels = upcomingReleases().slice(0, 4);
+  const pipe = [['Open', st.pending, 'var(--accent)', 'pending'], ['Done', st.booked, 'var(--green)', 'booked'], ['Not done', st.failed, 'var(--red)', 'failed'], ['Cancelled', st.cancelled, 'var(--muted)', 'Cancelled']];
+  const ptot = Math.max(1, st.total);
+  const groups = GROUPS.map(([k, n], i) => { const v = list.filter(b => DI(b).kind === k); return [n, stats(v), seriesColors()[i]]; });
+  return `
+  ${S.db.defaultPin ? `<div class="banner">You are still using the default PIN <b>1234</b>. <a href="#" data-act="go" data-page="settings">Change it in Settings</a>.</div>` : ''}
+  <div class="pageHead"><div><h2>Overview</h2><p>${esc(S.db.settings.shopName || 'Adithya Internet & CSC Center')} · ${new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
+    <div class="seg">${periods.map(p => `<button class="${S.period === p[0] ? 'on' : ''}" data-act="period" data-p="${p[0]}">${p[1]}</button>`).join('')}</div></div>
+  <div class="kpis">
+    ${kpi('Money received', inr(st.net), (vs ? vs : 'net of refunds'), delta(st.net, sp.net))}
+    ${kpi('Service income', inr(st.income), 'your charges on finished work', delta(st.income, sp.income))}
+    ${kpi('New entries', num(st.total).toLocaleString('en-IN'), vs || 'bookings, applications, sales', delta(st.total, sp.total), 'all')}
+    ${kpi('Completed', num(st.booked).toLocaleString('en-IN'), 'success rate ' + st.rate + '%', delta(st.booked, sp.booked), 'booked')}
+    ${kpi('Open work', open.length, 'waiting across all departments', '', 'pending')}
+    ${kpi('Refunds pending', inr(st.refundPending), st.refundPendingN + ' customer(s)', '', 'refund')}
+  </div>
+  <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr);margin-top:16px" id="dashRow1">
+    <div class="card"><h3>Money received by service line <span class="muted">last 6 months</span></h3>
+      <div class="legend">${GROUPS.map((g, i) => `<span><i style="background:${seriesColors()[i]}"></i>${g[1]}</span>`).join('')}</div>
+      <div class="chartBox"><canvas id="chTrend" aria-label="Money received per month, stacked by service line"></canvas></div></div>
+    <div class="card"><h3>Work queue <span class="muted">${q.reduce((a, x) => a + x[2], 0)} items</span></h3>
+      ${q.length ? `<div class="queue">${q.map(x => `<div class="q" data-act="kpiGo" data-go="${esc(x[3])}"><span class="dot" style="background:${qc[x[0]]}"></span><span class="t">${x[1]}<div class="muted small">${qLbl[x[0]]}</div></span><span class="n">${x[2]}</span></div>`).join('')}</div>` : '<div class="alert ok">All clear. Nothing waiting.</div>'}</div>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><h3>Status of this period's work</h3>
+      <div class="meter" role="img" aria-label="Status split">${pipe.filter(x => x[1]).map(x => `<span title="${x[0]}: ${x[1]}" style="width:${x[1] * 100 / ptot}%;background:${x[2]}"></span>`).join('')}</div>
+      <div class="queue" style="margin-top:8px">${pipe.map(x => `<div class="q" data-act="kpiGo" data-go="${x[3]}"><span class="dot" style="background:${x[2]}"></span><span class="t">${x[0]}</span><span class="muted small">${Math.round(x[1] * 100 / ptot)}%</span><span class="n">${x[1]}</span></div>`).join('')}</div></div>
+    <div class="card"><h3>Coming up <span class="muted">next 7 days</span></h3><div class="list">
+      ${soon.map(([d, b]) => { const dd = toD(d); return `<div class="li" data-act="openBooking" data-id="${esc(b.bookingId)}"><div class="date"><b>${dd.getDate()}</b><small>${MON[dd.getMonth()]}</small></div><div class="main2"><b>${esc(b.customerName)}</b><div class="muted small">${esc(DI(b).name)} · ${esc(b.service)}</div></div>${badge(b.status)}</div>`; }).join('') || '<div class="muted small">Nothing due in the next 7 days.</div>'}
+    </div></div>
+    <div class="card"><h3>TTD quota releases <a class="act" href="#" data-act="go" data-page="releases">Calendar</a></h3><div class="list">
+      ${rels.map(x => { const d = new Date(x.t); const n = all.filter(b => b.category === x.category && (b.status === 'Requested' || b.status === 'Attempting')).length; return `<div class="li" data-act="boardCat" data-cat="${esc(x.category)}"><div class="date"><b>${d.getDate()}</b><small>${MON[d.getMonth()]}</small></div><div class="main2"><b>${esc(x.label || x.category)}</b><div class="muted small">in <span class="cd" data-t="${x.t}"></span> · ${n} waiting</div></div></div>`; }).join('') || '<div class="muted small">No release dates entered.</div>'}
+    </div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>Service lines <span class="muted">${esc(periods.find(p => p[0] === S.period)[1].toLowerCase())}</span></h3>
+    <div class="grid g4">${groups.map(([n, x, c]) => `<div><div class="row small" style="gap:6px;color:var(--ink2)"><i style="width:10px;height:10px;border-radius:3px;background:${c};display:inline-block"></i>${n}</div><div style="font-size:19px;font-weight:650;margin-top:4px">${inr(x.received)}</div><div class="muted small">${x.total} entries · ${x.pending} open · income ${inr(x.income)}</div></div>`).join('')}</div></div>
+  ${deptCard(list, t)}`;
+};
+AFTER.dashboard = () => {
+  if (typeof Chart === 'undefined') return;
+  const dk = isDark();
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = dk ? '#8E9BB3' : '#64748B';
+  const grid = dk ? 'rgba(255,255,255,.06)' : 'rgba(15,23,42,.06)';
+  const months = []; const now = new Date();
+  for (let i = 5; i >= 0; i--) months.push(ym(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+  const surface = getComputedStyle(document.documentElement).getPropertyValue('--panel').trim() || '#fff';
+  S.charts.push(new Chart($('#chTrend'), { type: 'bar',
+    data: { labels: months.map(ymLabel), datasets: GROUPS.map(([k, n], i) => ({ label: n, backgroundColor: seriesColors()[i], borderColor: surface, borderWidth: { top: 2 }, borderSkipped: 'bottom', borderRadius: { topLeft: 4, topRight: 4 }, maxBarThickness: 36, stack: 's',
+      data: months.map(m => S.db.bookings.filter(b => String(b.requestDate).slice(0, 7) === m && DI(b).kind === k).reduce((a, b) => a + num(b.received), 0)) })) },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + inr(c.parsed.y), footer: items => 'Total: ' + inr(items.reduce((a, x) => a + x.parsed.y, 0)) } } },
+      scales: { x: { stacked: true, grid: { display: false }, border: { display: false } }, y: { stacked: true, grid: { color: grid }, border: { display: false }, ticks: { callback: v => '₹' + (v >= 1000 ? (v / 1000) + 'k' : v) } } } } }));
+};
+
+// ---------------------------------------------------------------- bookings list
+function filteredBookings() {
+  const f = S.bf, q = f.q.toLowerCase();
+  const t = todayIso();
+  return S.db.bookings.filter(b => {
+    if (q && ![b.bookingId, b.customerName, b.mobile, b.ttdRef, b.devotees, b.profile, b.service, b.fromPlace, b.toPlace, b.vehicleNo].some(v => String(v || '').toLowerCase().includes(q))) return false;
+    if (f.dept && DI(b).name !== f.dept) return false;
+    if (f.cat && b.category !== f.cat) return false;
+    if (f.login && b.ttdLogin !== f.login) return false;
+    if (f.month) { const d = f.when === 'service' ? (b.serviceDate || b.preferredDate) : b.requestDate; if (String(d).slice(0, 7) !== f.month) return false; }
+    switch (f.status) {
+      case '': return true;
+      case 'pending': return PENDING.includes(b.status);
+      case 'booked': return BOOKED.includes(b.status);
+      case 'failed': return FAILED.includes(b.status);
+      case 'refund': return b.refundStatus === 'Refund Pending';
+      case 'unsent': return needsMsg(b);
+      case 'smsonly': return b.contactVia === 'SMS' || b.contactVia === 'WhatsApp + SMS';
+      case 'stuck': return b.ttdPayment === 'Debited - No Ticket';
+      case 'remind': return BOOKED.includes(b.status) && !b.reminderSentOn && b.serviceDate && daysBetween(t, b.serviceDate) >= 0 && daysBetween(t, b.serviceDate) <= 2;
+      case 'stale': return b.status === 'Requested' && b.preferredDate && b.preferredDate < t;
+      case 'overdue': return overdue(b, t);
+      default: return b.status === f.status;
+    }
+  }).sort((a, b) => String(b.requestDate).localeCompare(String(a.requestDate)));
+}
+PAGES.bookings = () => {
+  const f = S.bf;
+  const list = filteredBookings();
+  const months = [...new Set(S.db.bookings.map(b => String(b.requestDate).slice(0, 7)).concat(S.db.bookings.map(b => String(b.serviceDate || b.preferredDate || '').slice(0, 7))).filter(Boolean))].sort().reverse();
+  const cnt = fn => S.db.bookings.filter(fn).length;
+  const chips = [['', 'All', S.db.bookings.length], ['pending', '⏳ Pending', cnt(b => PENDING.includes(b.status))], ['booked', '✅ Booked', cnt(b => BOOKED.includes(b.status))],
+    ['failed', '❌ Not booked', cnt(b => FAILED.includes(b.status))], ['refund', '↩️ Refund pending', cnt(b => b.refundStatus === 'Refund Pending')],
+    ['unsent', '💬 Not messaged', cnt(needsMsg)], ['smsonly', '📱 SMS customers', cnt(b => b.contactVia === 'SMS' || b.contactVia === 'WhatsApp + SMS')], ['stuck', '⚠️ TTD debited', cnt(b => b.ttdPayment === 'Debited - No Ticket')], ['overdue', '📄 Overdue applications', cnt(b => overdue(b, todayIso()))]];
+  const st = stats(list);
+  return `
+  <div class="toolbar">
+    <input class="i" style="min-width:240px;flex:1" placeholder="Search booking no, name, mobile, TTD ref…" data-bf="q" value="${esc(f.q)}">
+    <select class="i" data-bf="dept">${opt(deptOpts(), f.dept || '', 'All departments')}</select>
+    ${!f.dept || f.dept === 'TTD' ? `<select class="i" data-bf="cat">${opt(S.db.lists.categories, f.cat, 'All TTD categories')}</select>` : ''}
+    <select class="i" data-bf="when">${opt([['request', 'Request month'], ['service', 'Darshan month']], f.when)}</select>
+    <select class="i" data-bf="month">${opt(months.map(m => [m, ymLabel(m)]), f.month, 'All months')}</select>
+    <select class="i" data-bf="login">${opt(S.db.logins.map(l => [l.loginId, l.loginId + ' · ' + (l.holder || '')]), f.login, 'All TTD logins')}</select>
+    <select class="i" data-bf="status">${opt(S.db.lists.statuses, chips.some(c => c[0] === f.status) ? '' : f.status, 'Any status')}</select>
+    <button class="btn" data-act="exportBookings">⬇ Excel</button>
+    <button class="btn" data-act="bulkSms" title="Send an SMS to the bookings in this list">📱 Bulk SMS</button>
+  </div>
+  <div class="chipsRow">${chips.map(c => `<span class="chip ${f.status === c[0] ? 'on' : ''}" data-act="bstatus" data-s="${c[0]}">${c[1]} <span class="n">${c[2]}</span></span>`).join('')}</div>
+  <div class="row wrap small muted" style="margin-bottom:10px;gap:18px"><span><b>${list.length}</b> bookings</span><span>✅ ${st.booked}</span><span>❌ ${st.failed}</span><span>⏳ ${st.pending}</span><span>💰 Received ${inr(st.received)}</span><span>↩️ Pending refunds ${inr(st.refundPending)}</span></div>
+  <div class="tableWrap"><table class="t"><thead><tr><th>Booking</th><th>Customer</th><th>Service</th><th class="hideM">Persons</th><th class="hideM">Preferred</th><th>Status</th><th class="hideM">TTD ref · Date</th><th class="right hideM">Amount</th><th class="hideM">Refund</th><th class="hideM">Msg</th></tr></thead><tbody>
+  ${list.slice(0, 500).map(b => `<tr class="click" data-act="openBooking" data-id="${esc(b.bookingId)}">
+    <td class="nowrap"><b>${esc(b.bookingId)}</b><div class="muted small">${fD(b.requestDate)}</div></td>
+    <td><b>${esc(b.customerName)}</b><div class="muted small">${esc(b.mobile)}${b.profile ? ' · ' + esc(b.profile) : ''}</div></td>
+    <td><span class="cat">${CAT_ICON[b.category] || DI(b).icon} ${esc(DI(b).kind === 'ttd' ? b.category : DI(b).name)}</span><div class="small" style="margin-top:3px">${esc(b.service)}</div>${route(b) ? `<div class="muted small">${route(b)}</div>` : ''}</td>
+    <td class="hideM">${num(b.persons)}</td>
+    <td class="hideM nowrap">${fD(b.preferredDate)}</td>
+    <td>${badge(b.status)}</td>
+    <td class="hideM">${b.ttdRef ? `<b>${esc(b.ttdRef)}</b>` : '<span class="muted">—</span>'}<div class="muted small">${fD(b.serviceDate || b.checkIn)} ${esc(b.slot || '')}</div></td>
+    <td class="right hideM nowrap"><b>${inr(b.total)}</b><div class="muted small">paid ${inr(b.received)}</div></td>
+    <td class="hideM">${rBadge(b.refundStatus)}</td>
+    <td class="hideM nowrap">${viaIcon(b)}${b.contactVia === 'SMS' ? '<div class="muted small">SMS only</div>' : ''}</td></tr>`).join('')}
+  </tbody></table>${list.length ? '' : '<div class="empty"><div class="big">🔍</div>No bookings match these filters.</div>'}
+  ${list.length > 500 ? `<div class="empty small">Showing first 500 of ${list.length}. Narrow the filters or export to Excel.</div>` : ''}</div>`;
+};
+AFTER.bookings = () => {
+  $$('[data-bf]').forEach(el => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', () => {
+    S.bf[el.dataset.bf] = el.value;
+    if (el.tagName === 'INPUT') { clearTimeout(S._t); S._t = setTimeout(() => { const pos = el.selectionStart; render(); const n = $('[data-bf="q"]'); n.focus(); n.setSelectionRange(pos, pos); }, 250); } else render();
+  }));
+};
+
+// ---------------------------------------------------------------- booking drawer
+function openBooking(id, opts) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  if (!b) return toast('Booking not found', 'err');
+  opts = opts || {};
+  const key = opts.key || pickTemplate(b);
+  const lang = S.lang;
+  const chan = opts.chan || (b.contactVia === 'SMS' ? 'sms' : 'wa');
+  const msg = buildMsg(b, key, lang, chan);
+  const acts = S.db.activity.filter(a => a.ref === id).slice(0, 12);
+  const isRoom = b.category === 'Accommodation';
+  const kv = (l, v) => `<div><small>${l}</small><span>${v || '<span class="muted">—</span>'}</span></div>`;
+  const tplList = S.db.messages.map(m => [m.key, m.name]);
+  drawer(`
+    <div class="dHero">
+      <div class="row between"><span class="small" style="opacity:.8">${esc(b.bookingId)} · ${fDT(b.requestDate)}</span><button class="iconBtn" style="color:#fff" data-act="closeDrawer">✕</button></div>
+      <h2>${esc(b.customerName)}</h2>
+      <div class="small" style="opacity:.85">${DI(b).icon} ${esc(DI(b).name)}</div>
+      <div class="row wrap" style="gap:8px">${badge(b.status)} <span class="muted">${CAT_ICON[b.category] || ''} ${esc(b.service)} · ${num(b.persons)} person(s)</span></div>
+      <div class="row wrap" style="margin-top:8px;gap:14px;font-size:13px">
+        ${b.mobile ? `<a style="color:#fff" href="tel:${esc(b.mobile)}">📞 ${esc(b.mobile)}</a><a style="color:#fff" target="_blank" href="${waUrl(b.mobile, '')}">🟢 WhatsApp</a>` : ''}
+      </div>
+      <div class="actions">
+        ${DI(b).kind === 'ttd' || DI(b).kind === 'travel' ? `<button class="btn green sm" data-act="markBooked" data-id="${esc(id)}">✅ Booked</button>
+        <button class="btn red sm" data-act="markNotBooked" data-id="${esc(id)}">❌ Not booked</button>
+        ${DI(b).kind === 'ttd' ? `<button class="btn sm" data-act="markDip" data-id="${esc(id)}">🎲 Lucky dip</button>` : ''}
+        <button class="btn sm" data-act="markAttempt" data-id="${esc(id)}">▶ Attempting</button>
+        <button class="btn sm" data-act="markFailed" data-id="${esc(id)}">⚠️ Paid, no ticket</button>` : DI(b).kind === 'app' ? `<button class="btn sm" data-act="markApplied" data-id="${esc(id)}">📝 Applied</button>
+        <button class="btn sm" data-act="setStatus" data-s="In Process" data-id="${esc(id)}">🔄 In process</button>
+        <button class="btn sm" data-act="setStatus" data-s="Ready to Collect" data-id="${esc(id)}">📦 Ready</button>
+        <button class="btn green sm" data-act="markDone" data-id="${esc(id)}">✅ Delivered</button>
+        <button class="btn red sm" data-act="markRejected" data-id="${esc(id)}">⛔ Rejected</button>` : `<button class="btn green sm" data-act="markDone" data-id="${esc(id)}">✅ Completed</button>`}
+        <button class="btn sm" data-act="refund" data-id="${esc(id)}">↩️ Refund</button>
+        <button class="btn sm" data-act="editBooking" data-id="${esc(id)}">✏️ Edit</button>
+        <button class="btn sm" data-act="receipt" data-id="${esc(id)}">🧾 Receipt</button>
+        <button class="btn sm" data-act="moreStatus" data-id="${esc(id)}">⋯ More</button>
+      </div>
+    </div>
+    <div class="dSec" id="msgSec">
+      <h4>💬 Message to customer ${b.messageStatus === 'Sent' ? `<span class="badge s-Booked" style="margin-left:6px">Sent ${esc(b.messageVia ? 'by ' + b.messageVia : '')} ${fDT(b.messageSentOn)}</span>` : '<span class="badge s-Requested" style="margin-left:6px">Not sent</span>'}
+        <span class="badge nodot cat" style="margin-left:6px" title="Set in Edit booking">Prefers ${esc(b.contactVia || 'WhatsApp')}</span></h4>
+      <div class="row wrap" style="margin-bottom:10px">
+        <div class="seg"><button class="${chan === 'wa' ? 'on' : ''}" data-act="msgChan" data-c="wa" data-id="${esc(id)}" data-k="${key}">🟢 WhatsApp</button><button class="${chan === 'sms' ? 'on' : ''}" data-act="msgChan" data-c="sms" data-id="${esc(id)}" data-k="${key}">📱 SMS</button></div>
+        <div class="seg"><button class="${lang === 'Telugu' ? 'on' : ''}" data-act="msgLang" data-l="Telugu" data-id="${esc(id)}" data-k="${key}" data-c="${chan}">తెలుగు</button><button class="${lang === 'English' ? 'on' : ''}" data-act="msgLang" data-l="English" data-id="${esc(id)}" data-k="${key}" data-c="${chan}">English</button></div>
+        <select class="i" style="width:auto;flex:1;min-width:160px" id="tplSel">${opt(tplList, key)}</select>
+      </div>
+      <textarea class="i msgBox" id="msgText" rows="${chan === 'sms' ? 6 : 12}" style="${chan === 'sms' ? 'background:var(--panel);color:var(--ink);border-color:var(--line)' : 'background:#E7FFDB;color:#111'}">${esc(msg)}</textarea>
+      ${chan === 'sms' ? `<div class="small muted" id="smsCount" style="margin-top:4px">${smsInfo(msg)}</div>` : ''}
+      <div class="row wrap" style="margin-top:10px">
+        ${chan === 'sms'
+          ? `<button class="btn primary" data-act="sendSms" data-id="${esc(id)}" ${smsReady() ? '' : 'disabled title="Set up an SMS gateway in Settings"'}>📤 Send SMS</button>
+             <a class="btn" id="smsLink" href="${smsHref(b.mobile, msg)}" data-act="smsApp" data-id="${esc(id)}">📱 Phone SMS app</a>`
+          : `<button class="btn wa" data-act="sendWa" data-id="${esc(id)}">🟢 Send on WhatsApp</button>`}
+        <button class="btn" data-act="copyMsg" data-id="${esc(id)}">📋 Copy</button>
+        <button class="btn ghost" data-act="markSent" data-id="${esc(id)}" data-c="${chan === 'sms' ? 'SMS' : 'WhatsApp'}">✔ Mark as sent</button>
+      </div>
+      ${chan === 'sms' && !smsReady() ? `<div class="small muted" style="margin-top:6px">To send from here, choose an SMS gateway in <a href="#" data-act="go" data-page="settings">Settings › SMS</a>. “Phone SMS app” works on a mobile phone without a gateway.</div>` : ''}
+    </div>
+    ${DI(b).kind === 'travel' ? `<div class="dSec"><h4>${DI(b).icon} Journey</h4><div class="kv">
+      ${kv('Service', esc(b.service))}${kv('Route', route(b))}
+      ${kv('Operator / no', esc([b.operator, b.vehicleNo].filter(Boolean).join(' ')))}${kv('Class / quota', esc([b.travelClass, b.quota].filter(Boolean).join(' · ')))}
+      ${kv('Wanted date', fD(b.preferredDate))}${kv('Boarding', esc(b.boardingPoint))}
+      ${kv('PNR / ticket', b.ttdRef ? `<b>${esc(b.ttdRef)}</b>` : '')}${kv('Ticket status', esc(b.ticketStatus))}
+      ${kv('Journey date', fD(b.serviceDate) + (b.slot ? ' · ' + esc(b.slot) : ''))}${kv('Coach / seat', esc(b.seatInfo))}
+      ${kv('Ticket link', b.ticketLink ? `<a href="${esc(b.ticketLink)}" target="_blank">Open ticket</a>` : '')}
+      </div>${b.passengerDetails ? `<div class="small" style="margin-top:8px;white-space:pre-line"><b>Passengers</b>\n${esc(b.passengerDetails)}</div>` : ''}</div>` : ''}
+    ${DI(b).kind === 'app' ? (() => { const need = String((serviceByName(b.service) || {}).documents || '').split(',').map(x => x.trim()).filter(Boolean); const have = String(b.documents || '').split(',').map(x => x.trim()).filter(Boolean); const miss = need.filter(x => !have.includes(x)); return `<div class="dSec"><h4>${DI(b).icon} Application</h4><div class="kv">
+      ${kv('Service', esc(b.service))}${kv('Application / ref no', b.ttdRef ? `<b>${esc(b.ttdRef)}</b>` : '')}
+      ${kv('Expected date', b.expectedDate ? (overdue(b, todayIso()) ? `<b style="color:var(--red)">${fD(b.expectedDate)} · overdue</b>` : fD(b.expectedDate)) : '')}${kv('Status', badge(b.status))}
+      </div><div class="small" style="margin-top:8px">📎 <b>Documents:</b> ${have.map(x => '✔ ' + esc(x)).join(' · ') || '<span class="muted">none ticked</span>'}${miss.length ? `<div style="color:var(--red);margin-top:4px">Missing: ${miss.map(esc).join(', ')}</div>` : ''}</div></div>`; })() : ''}
+    <div class="dSec ${DI(b).kind !== 'ttd' ? 'hide' : ''}"><h4>🛕 Service</h4><div class="kv">
+      ${kv('Category', esc(b.category))}${kv('Service', esc(b.service))}
+      ${kv('Preferred date', fD(b.preferredDate))}${kv('Alternate date', fD(b.alternateDate))}
+      ${kv('Quota release', fD(b.releaseDate))}${kv('TTD login used', esc(b.ttdLogin))}
+    </div></div>
+    <div class="dSec ${DI(b).kind === 'quick' ? 'hide' : ''}"><h4>${DI(b).kind === 'ttd' ? 'Devotees' : DI(b).kind === 'travel' ? 'Passengers' : 'Persons'} (${num(b.persons)})</h4>
+      ${(b.customerIds ? String(b.customerIds).split(/[,\s]+/).filter(Boolean) : []).map(cid => { const c = S.db.customers.find(x => x.customerId === cid); return c ? `<div class="pick" style="margin-bottom:6px" data-act="openCustomer" data-id="${esc(cid)}"><div class="avatar">${initials(c.name)}</div><div class="grow"><b>${esc(c.name)}</b><div class="muted small">${esc(c.gender)} · ${ageOf(c.dob) || '?'} yrs · ${esc(c.idType)} ${maskId(c.idNumber)}${c.gotram ? ' · Gotram ' + esc(c.gotram) : ''}</div></div></div>` : ''; }).join('') || `<div>${esc(b.devotees) || '<span class="muted">—</span>'}</div>`}
+    </div>
+    <div class="dSec ${DI(b).kind === 'ttd' ? '' : 'hide'}"><h4>🎫 TTD booking result</h4><div class="kv">
+      ${kv('TTD booking / ticket no', b.ttdRef ? `<b>${esc(b.ttdRef)}</b>` : '')}${kv(isRoom ? 'Check-in' : 'Darshan / seva date', fD(isRoom ? b.checkIn : b.serviceDate))}
+      ${isRoom ? kv('Check-out', fD(b.checkOut)) + kv('Room / cottage', esc(b.room)) : kv('Slot / time', esc(b.slot)) + kv('Reporting point', esc(b.reportingPoint))}
+      ${kv('TTD payment', esc(b.ttdPayment))}${kv('Ticket link', b.ticketLink ? `<a href="${esc(b.ticketLink)}" target="_blank">Open ticket</a>` : '')}
+    </div></div>
+    <div class="dSec"><h4>💰 Payment &amp; refund</h4><div class="kv">
+      ${kv('Ticket amount', inr(b.ticketAmount))}${kv('Service charge', inr(b.serviceCharge))}
+      ${kv('Total', `<b>${inr(b.total)}</b>`)}${kv('Received', inr(b.received) + (b.paymentMode ? ' · ' + esc(b.paymentMode) : ''))}
+      ${kv('Payment status', esc(b.paymentStatus))}${kv('Refund', rBadge(b.refundStatus) + (num(b.refundAmount) ? ' ' + inr(b.refundAmount) : ''))}
+      ${b.refundDate ? kv('Refund date', fD(b.refundDate)) + kv('Refund mode', esc(b.refundMode)) : ''}
+    </div></div>
+    ${b.remarks ? `<div class="dSec"><h4>📝 Remarks</h4><div style="white-space:pre-wrap">${esc(b.remarks)}</div></div>` : ''}
+    <div class="dSec"><h4>🕘 History</h4><div class="timeline">${acts.map(a => `<div class="ev"><b>${esc(a.action)}</b> <span class="muted small">· ${esc(a.user)} · ${fDT(a.time)}</span>${a.details ? `<div class="muted small">${esc(a.details)}</div>` : ''}</div>`).join('') || '<div class="muted small">No history yet.</div>'}</div>
+      <div class="muted small" style="margin-top:8px">Handled by ${esc(b.handledBy)} · last updated ${fDT(b.updatedOn)}</div></div>
+  `, ov => {
+    $('#tplSel', ov).addEventListener('change', e => openBooking(id, { key: e.target.value, chan, scrollMsg: true }));
+    $('#msgText', ov).addEventListener('input', e => {
+      if ($('#smsLink', ov)) $('#smsLink', ov).href = smsHref(b.mobile, e.target.value);
+      if ($('#smsCount', ov)) $('#smsCount', ov).innerHTML = smsInfo(e.target.value);
+    });
+    if (opts.scrollMsg) setTimeout(() => $('#msgSec', ov).scrollIntoView({ behavior: 'smooth' }), 50);
+  });
+}
+
+async function saveBooking(patch, okMsg) {
+  const saved = await call('saveBooking', patch);
+  upsertLocal('bookings', 'bookingId', saved);
+  pushActivity(saved.bookingId, okMsg || 'Booking saved', '');
+  renderNav();
+  render();
+  toast(okMsg || 'Saved', 'ok');
+  return saved;
+}
+
+// Status dialogs ------------------------------------------------------------
+function loginOptions(cur) { return opt(S.db.logins.filter(l => l.status !== 'Closed').map(l => [l.loginId, l.loginId + (l.holder ? ' · ' + l.holder : '')]), cur, '— select —'); }
+function markBooked(id) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  const svc = serviceByName(b.service) || {};
+  const isRoom = b.category === 'Accommodation';
+  const tv = TRAVEL[DI(b).name];
+  const m = modal({ title: '✅ Mark as booked — ' + esc(b.customerName), body: tv ? `<form class="grid g2" id="fBooked">
+    ${fld('PNR / ticket no', inp('ttdRef', b.ttdRef, 'required'), 'req')}${fld('Ticket status', sel('ticketStatus', S.db.lists.ticketStatuses || ['CNF'], b.ticketStatus || 'CNF'))}
+    ${fld('Journey date', inp('serviceDate', b.serviceDate || b.preferredDate, 'type="date" required'), 'req')}${fld('Departure time', inp('slot', b.slot, 'placeholder="e.g. 18:45"'))}
+    ${fld(tv.no, inp('vehicleNo', b.vehicleNo))}${fld('Operator / airline', inp('operator', b.operator || tv.ops[0]))}
+    ${fld('Coach / seat / berth', inp('seatInfo', b.seatInfo, 'placeholder="e.g. B2 21, 22"'))}${fld('Class', inp('travelClass', b.travelClass))}
+    ${fld('Boarding point', inp('boardingPoint', b.boardingPoint))}${fld('Ticket fare (₹)', inp('ticketAmount', b.ticketAmount, 'type="number" min="0"'))}
+    ${fld('Ticket PDF / link', inp('ticketLink', b.ticketLink, 'placeholder="Google Drive link (optional)"'), 'spanAll')}
+  </form>` : `<form class="grid g2" id="fBooked">
+    ${fld('TTD booking / ticket no', inp('ttdRef', b.ttdRef, 'required placeholder="e.g. SED1234567890"'), 'req')}
+    ${fld('TTD login used', `<select class="i" name="ttdLogin">${loginOptions(b.ttdLogin)}</select>`)}
+    ${isRoom ? fld('Check-in', inp('checkIn', b.checkIn || b.preferredDate, 'type="date" required'), 'req') + fld('Check-out', inp('checkOut', b.checkOut, 'type="date"')) + fld('Room / cottage', inp('room', b.room))
+      : fld('Darshan / seva date', inp('serviceDate', b.serviceDate || b.preferredDate, 'type="date" required'), 'req') + fld('Slot / reporting time', inp('slot', b.slot, 'placeholder="e.g. 10:00 AM - 11:00 AM"'))}
+    ${fld('Reporting point', inp('reportingPoint', b.reportingPoint || svc.reportingPoint || ''))}
+    ${fld('Ticket amount (₹)', inp('ticketAmount', b.ticketAmount, 'type="number" min="0"'))}
+    ${fld('Ticket PDF / link', inp('ticketLink', b.ticketLink, 'placeholder="Google Drive link (optional)"'))}
+    ${fld('Remarks', `<textarea class="i" name="remarks" rows="2">${esc(b.remarks)}</textarea>`, 'spanAll')}
+  </form>`, foot: '<button class="btn" data-x2>Cancel</button><button class="btn green" data-ok>✅ Save &amp; prepare message</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const f = $('#fBooked', m.el);
+    if (!f.reportValidity()) return;
+    const d = formData(f);
+    try {
+      await saveBooking(Object.assign({ bookingId: id, status: 'Booked', ttdPayment: 'Paid to TTD', refundStatus: 'Not Applicable' }, d), 'Marked booked ✅');
+      m.close();
+      openBooking(id, { scrollMsg: true });
+    } catch (e) { fail(e); }
+  };
+}
+function markApplied(id) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  const s = serviceByName(b.service) || {};
+  const exp = b.expectedDate || (num(s.daysToComplete) ? iso(new Date(Date.now() + num(s.daysToComplete) * 86400000)) : '');
+  const m = modal({ title: '📝 Applied — ' + esc(b.customerName), size: 'sm', body: `<form class="grid g2" id="fApp">
+    ${fld('Application / acknowledgement no', inp('ttdRef', b.ttdRef, 'required'), 'req spanAll')}
+    ${fld('Expected date', inp('expectedDate', exp, 'type="date"'))}${fld('Govt / portal fee paid (₹)', inp('ticketAmount', b.ticketAmount, 'type="number" min="0"'))}
+    ${fld('Remarks', `<textarea class="i" name="remarks" rows="2">${esc(b.remarks)}</textarea>`, 'spanAll')}
+  </form>`, foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save &amp; prepare message</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const f = $('#fApp', m.el); if (!f.reportValidity()) return;
+    try { await saveBooking(Object.assign({ bookingId: id, status: 'Applied' }, formData(f)), 'Marked applied 📝'); m.close(); openBooking(id, { scrollMsg: true }); } catch (e) { fail(e); }
+  };
+}
+function markNotBooked(id, status) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  status = status || 'Not Booked';
+  const m = modal({ title: '❌ ' + esc(status) + ' — ' + esc(b.customerName), body: `<form class="grid g2" id="fNot">
+    ${fld('What happens to the money?', sel('refundStatus', [['Refund Pending', 'Refund to customer (pending)'], ['Refunded', 'Refunded now'], ['Adjusted to Next Booking', 'Keep for next release'], ['Not Applicable', 'Nothing was paid']], num(b.received) ? 'Refund Pending' : 'Not Applicable'), 'spanAll')}
+    ${fld('Refund amount (₹)', inp('refundAmount', b.refundAmount || b.received, 'type="number" min="0"'))}
+    ${fld('Refund mode', sel('refundMode', S.db.lists.paymentModes, b.refundMode || b.paymentMode, '—'))}
+    ${DI(b).kind === 'ttd' ? `${fld('TTD payment', sel('ttdPayment', S.db.lists.ttdPayments, b.ttdPayment || 'Not Paid'))}
+    ${fld('TTD login tried', `<select class="i" name="ttdLogin">${loginOptions(b.ttdLogin)}</select>`)}` : ''}
+    ${fld('Reason / remarks', `<textarea class="i" name="remarks" rows="2" placeholder="e.g. Quota sold out in 4 minutes">${esc(b.remarks)}</textarea>`, 'spanAll')}
+  </form>`, foot: '<button class="btn" data-x2>Cancel</button><button class="btn red" data-ok>Save &amp; prepare message</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const d = formData($('#fNot', m.el));
+    if (d.refundStatus === 'Refunded') d.refundDate = todayIso();
+    if (d.refundStatus === 'Not Applicable') d.refundAmount = 0;
+    try { await saveBooking(Object.assign({ bookingId: id, status }, d), status + ' saved'); m.close(); openBooking(id, { scrollMsg: true }); } catch (e) { fail(e); }
+  };
+}
+function markDip(id) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  const m = modal({ title: '🎲 Lucky dip — ' + esc(b.customerName), size: 'sm', body: `<form class="grid" id="fDip">
+    ${fld('Result', sel('status', ['Lucky Dip - Registered', 'Lucky Dip - Selected', 'Lucky Dip - Not Selected'], b.status.indexOf('Lucky') === 0 ? b.status : 'Lucky Dip - Registered'))}
+    ${fld('Registration / ticket no', inp('ttdRef', b.ttdRef))}
+    ${fld('Seva date (if selected)', inp('serviceDate', b.serviceDate, 'type="date"'))}
+    ${fld('Ticket amount (₹)', inp('ticketAmount', b.ticketAmount, 'type="number" min="0"'))}
+    ${fld('TTD login', `<select class="i" name="ttdLogin">${loginOptions(b.ttdLogin)}</select>`)}
+  </form>`, foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save &amp; prepare message</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const d = formData($('#fDip', m.el));
+    if (d.status === 'Lucky Dip - Not Selected') { m.close(); return markNotBooked(id, d.status); }
+    try { await saveBooking(Object.assign({ bookingId: id }, d), d.status + ' saved'); m.close(); openBooking(id, { scrollMsg: true }); } catch (e) { fail(e); }
+  };
+}
+function markAttempt(id) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  const m = modal({ title: '▶ Start booking attempt', size: 'sm', body: `<form id="fAtt" class="grid">
+    <div class="muted small">${esc(b.customerName)} · ${esc(b.service)} · ${num(b.persons)} person(s) · preferred ${fD(b.preferredDate)}</div>
+    ${fld('TTD login you are using', `<select class="i" name="ttdLogin">${loginOptions(b.ttdLogin)}</select>`)}</form>`,
+    foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Start</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    try { await saveBooking(Object.assign({ bookingId: id, status: 'Attempting' }, formData($('#fAtt', m.el))), 'Attempt started'); m.close(); } catch (e) { fail(e); }
+  };
+}
+function refundModal(id) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  const m = modal({ title: '↩️ Refund — ' + esc(b.customerName), size: 'sm', body: `<form id="fRef" class="grid">
+    <div class="muted small">Received ${inr(b.received)} · Status ${esc(b.status)}</div>
+    ${fld('Refund status', sel('refundStatus', S.db.lists.refundStatuses, b.refundStatus === 'Refund Pending' ? 'Refunded' : b.refundStatus))}
+    ${fld('Refund amount (₹)', inp('refundAmount', b.refundAmount || b.received, 'type="number" min="0"'))}
+    ${fld('Refund date', inp('refundDate', b.refundDate || todayIso(), 'type="date"'))}
+    ${fld('Refund mode', sel('refundMode', S.db.lists.paymentModes, b.refundMode || b.paymentMode, '—'))}
+    ${fld('TTD payment', sel('ttdPayment', S.db.lists.ttdPayments, b.ttdPayment))}</form>`,
+    foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const d = formData($('#fRef', m.el));
+    try {
+      await saveBooking(Object.assign({ bookingId: id }, d), 'Refund updated');
+      m.close();
+      openBooking(id, { scrollMsg: true, key: d.refundStatus === 'Refunded' ? 'refund_done' : undefined });
+    } catch (e) { fail(e); }
+  };
+}
+function moreStatus(id) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  const m = modal({ title: '⋯ Change status', size: 'sm', body: `<div class="grid">
+    ${S.db.lists.statuses.map(s => `<button class="btn" style="justify-content:flex-start" data-s="${esc(s)}">${badge(s)} ${s === b.status ? '<span class="muted small">(current)</span>' : ''}</button>`).join('')}
+    ${S.user.role === 'Admin' ? '<hr style="border:0;border-top:1px solid var(--line);width:100%"><button class="btn red" data-del>🗑 Delete booking</button>' : ''}</div>`, noFocus: true });
+  $$('[data-s]', m.el).forEach(btn => btn.onclick = async () => {
+    const s = btn.dataset.s;
+    m.close();
+    if (s === 'Booked') return markBooked(id);
+    if (s === 'Not Booked' || s === 'Lucky Dip - Not Selected') return markNotBooked(id, s);
+    if (s === 'Attempting') return markAttempt(id);
+    try { await saveBooking({ bookingId: id, status: s }, 'Status → ' + s); openBooking(id, { scrollMsg: true }); } catch (e) { fail(e); }
+  });
+  const del = $('[data-del]', m.el);
+  if (del) del.onclick = async () => {
+    m.close();
+    if (!await confirmBox('Delete booking <b>' + esc(id) + '</b> permanently? This cannot be undone.', 'Delete')) return;
+    try { await call('deleteBooking', { bookingId: id }); S.db.bookings = S.db.bookings.filter(x => x.bookingId !== id); closeDrawer(); renderNav(); render(); toast('Booking deleted', 'ok'); } catch (e) { fail(e); }
+  };
+}
+
+// New / edit booking --------------------------------------------------------
+function bookingForm(id, preset) {
+  const b = id ? Object.assign({}, S.db.bookings.find(x => x.bookingId === id)) : Object.assign({ department: S.bf.dept || 'TTD', category: 'Darshan', persons: 1, received: '', paymentMode: 'Cash' }, preset || {});
+  b.department = DI(b).name;
+  const picked = new Set(String(b.customerIds || '').split(/[,\s]+/).filter(Boolean));
+  let curProfile = b.profile || (preset && preset.profile) || '';
+  const P = profiles();
+  const svcOpts = cat => S.db.services.filter(s => s.active !== 'No' && DI(s).name === f.department.value && (DI(s).kind !== 'ttd' || s.category === cat)).map(s => [s.name, s.name + (num(s.price) ? ' · ₹' + num(s.price).toLocaleString('en-IN') + '/' + (s.per || 'person').toLowerCase() : '')]);
+  const m = modal({ title: id ? '✏️ Edit booking ' + esc(id) : '🎫 New booking request', body: `
+  <form id="fBk" class="grid g2" autocomplete="off">
+    ${fld('Department', sel('department', deptOpts(), b.department), 'spanAll')}
+    <div class="spanAll card" style="padding:12px;box-shadow:none;background:var(--panel2)">
+      <div class="row between"><b id="bkWho">👨‍👩‍👧 Devotees</b><button type="button" class="btn sm" id="bkNewCust">＋ New devotee</button></div>
+      <input class="i" id="bkFind" placeholder="Search family / devotee name / mobile…" style="margin-top:8px">
+      <div id="bkFound" class="row wrap" style="margin-top:8px"></div>
+      <div id="bkMembers" class="grid g2" style="margin-top:8px"></div>
+      <div class="muted small" id="bkPickInfo" style="margin-top:6px"></div>
+    </div>
+    ${fld('Customer name (lead)', inp('customerName', b.customerName, 'required'), 'req')}
+    ${fld('Mobile (for WhatsApp)', inp('mobile', b.mobile, 'inputmode="numeric" required pattern="[0-9 +]{10,14}"'), 'req')}
+    ${fld('Send messages by', sel('contactVia', S.db.lists.contactVias || ['WhatsApp', 'SMS', 'WhatsApp + SMS'], b.contactVia || 'WhatsApp'))}
+    ${fld('<span id="lblPeople">Devotees</span>', inp('devotees', b.devotees), 'span2')}
+    <input type="hidden" name="customerIds" value="${esc(b.customerIds || '')}"><input type="hidden" name="profile" value="${esc(b.profile || '')}">
+    ${fld('Category', sel('category', S.db.lists.categories, b.category), 'dk dk-ttd')}
+    ${fld('Service', `<select class="i" name="service" required></select>`, 'req')}
+    ${fld('From', inp('fromPlace', b.fromPlace, 'placeholder="Station / city"'), 'dk dk-travel')}${fld('To', inp('toPlace', b.toPlace, 'placeholder="Station / city"'), 'dk dk-travel')}
+    ${fld('Operator / airline', inp('operator', b.operator, 'list="dlOps"'), 'dk dk-travel')}${fld('<span id="lblVno">Train no</span>', inp('vehicleNo', b.vehicleNo), 'dk dk-travel')}
+    ${fld('Class', inp('travelClass', b.travelClass, 'list="dlCls"'), 'dk dk-travel')}${fld('Quota', sel('quota', S.db.lists.quotas || [], b.quota || 'General'), 'dk dk-travel')}
+    ${fld('Boarding point', inp('boardingPoint', b.boardingPoint), 'dk dk-travel')}
+    <datalist id="dlOps"></datalist><datalist id="dlCls"></datalist>
+    ${fld('No. of persons', inp('persons', b.persons || 1, 'type="number" min="1" max="20"'))}
+    ${fld('<span id="lblPref">Preferred date</span>', inp('preferredDate', b.preferredDate, 'type="date"'), 'dk dk-ttd dk-travel')}
+    ${fld('Application / ref no', inp('ttdRef', b.ttdRef), 'dk dk-app')}${fld('Expected date', inp('expectedDate', b.expectedDate, 'type="date"'), 'dk dk-app')}
+    <div class="f spanAll dk dk-app"><span>📎 Documents received <span class="muted">(tick what the customer gave)</span></span><div id="bkDocs" class="row wrap" style="gap:6px"></div></div>
+    <input type="hidden" name="documents" value="${esc(b.documents || '')}">
+    ${fld('Passenger details <span class="muted">(one per line: name, gender, age, berth)</span>', `<textarea class="i" name="passengerDetails" rows="3" placeholder="Sita, F, 30, LB">${esc(b.passengerDetails)}</textarea>`, 'dk dk-travel spanAll')}
+    ${fld('Alternate date', inp('alternateDate', b.alternateDate, 'type="date"'), 'dk dk-ttd dk-travel')}
+    ${fld('Quota release date', inp('releaseDate', b.releaseDate, 'type="date"'), 'dk dk-ttd')}
+    ${fld('TTD login to use', `<select class="i" name="ttdLogin">${loginOptions(b.ttdLogin)}</select>`, 'dk dk-ttd')}
+    ${fld('<span id="lblFee">Ticket amount (₹)</span>', inp('ticketAmount', b.ticketAmount, 'type="number" min="0"'))}
+    ${fld('Service charge (₹)', inp('serviceCharge', b.serviceCharge, 'type="number" min="0"'))}
+    ${fld('Amount received (₹)', inp('received', b.received, 'type="number" min="0"'))}
+    ${fld('Payment mode', sel('paymentMode', S.db.lists.paymentModes, b.paymentMode, '—'))}
+    <div class="spanAll row" style="justify-content:flex-end;font-size:15px">Total: <b id="bkTotal" style="margin-left:6px">₹0</b></div>
+    ${fld('Remarks', `<textarea class="i" name="remarks" rows="2">${esc(b.remarks)}</textarea>`, 'spanAll')}
+  </form>`, foot: `<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>${id ? 'Save changes' : 'Create booking'}</button>`, noFocus: true });
+  const f = $('#fBk', m.el);
+  const maxP = () => { const s = serviceByName(f.service.value); return num(s && s.maxPersons) || 6; };
+  const recalc = (force) => {
+    const s = serviceByName(f.service.value);
+    if (s && force) {
+      const n = num(f.persons.value) || 1;
+      const per = String(s.per || 'Person').toLowerCase();
+      const units = per === 'person' ? n : per === 'couple' ? Math.ceil(n / 2) : 1;
+      f.ticketAmount.value = num(s.price) * units;
+      f.serviceCharge.value = s.serviceCharge !== '' && s.serviceCharge != null ? num(s.serviceCharge) * (per === 'person' ? n : 1) : num(S.db.settings.defaultServiceCharge);
+    }
+    $('#bkTotal', m.el).textContent = inr(num(f.ticketAmount.value) + num(f.serviceCharge.value));
+  };
+  const showDocs = () => {
+    const s = serviceByName(f.service.value);
+    const have = new Set(String(f.documents.value).split(',').map(x => x.trim()).filter(Boolean));
+    const need = String((s && s.documents) || '').split(',').map(x => x.trim()).filter(Boolean);
+    [...have].forEach(x => { if (!need.includes(x)) need.push(x); });
+    $('#bkDocs', m.el).innerHTML = need.length ? need.map(x => `<label class="chip ${have.has(x) ? 'on' : ''}"><input type="checkbox" data-doc="${esc(x)}" ${have.has(x) ? 'checked' : ''} style="display:none">${have.has(x) ? '✔' : '○'} ${esc(x)}</label>`).join('') : '<span class="muted small">No checklist for this service. Add one in Services &amp; Prices.</span>';
+    $$('#bkDocs [data-doc]', m.el).forEach(cb => cb.onchange = () => { f.documents.value = $$('#bkDocs [data-doc]', m.el).filter(x => x.checked).map(x => x.dataset.doc).join(', '); showDocs(); });
+  };
+  const applyDept = (refill) => {
+    const kind = DI(f.department.value).kind;
+    $$('.dk', f).forEach(el => el.classList.toggle('hide', !el.classList.contains('dk-' + kind)));
+    $('#bkWho', m.el).textContent = kind === 'ttd' ? '👨‍👩‍👧 Devotees' : kind === 'travel' ? '👨‍👩‍👧 Passengers' : '👤 Customer / family';
+    $('#lblPeople', m.el).textContent = kind === 'ttd' ? 'Devotees' : kind === 'travel' ? 'Passengers' : 'Persons (names)';
+    $('#lblFee', m.el).textContent = kind === 'ttd' || kind === 'travel' ? 'Ticket amount (₹)' : 'Govt / portal fee (₹)';
+    if (refill) f.service.innerHTML = opt(svcOpts(f.category.value), refill === 'keep' ? b.service : '', '— choose —');
+    showDocs();
+    const tv = TRAVEL[f.department.value];
+    $('#lblPref', m.el).textContent = kind === 'travel' ? 'Journey date (wanted)' : 'Preferred date';
+    if (tv) {
+      $('#dlOps', m.el).innerHTML = tv.ops.map(o => `<option value="${esc(o)}">`).join('');
+      $('#dlCls', m.el).innerHTML = tv.classes.map(o => `<option value="${esc(o)}">`).join('');
+      $('#lblVno', m.el).textContent = tv.no;
+      if (f.department.value === 'Train' && !f.operator.value) f.operator.value = 'IRCTC';
+      f.quota.closest('.f').classList.toggle('hide', f.department.value !== 'Train');
+    }
+  };
+  const autoRelease = () => {
+    if (DI(f.department.value).kind !== 'ttd') return;
+    if (f.releaseDate.value && id) return;
+    const r = upcomingReleases(f.category.value)[0];
+    if (r) f.releaseDate.value = r.releaseDate;
+  };
+  const syncPicked = () => {
+    const members = S.db.customers.filter(c => picked.has(c.customerId));
+    const order = [...picked].map(cid => members.find(c => c.customerId === cid)).filter(Boolean);
+    f.customerIds.value = order.map(c => c.customerId).join(', ');
+    if (order.length) {
+      f.devotees.value = order.map(c => c.name).join(', ');
+      f.persons.value = order.length;
+      f.customerName.value = order[0].name;
+      const prof = P.find(p => p.name === curProfile);
+      f.mobile.value = (prof && prof.contact.mobile) || order[0].mobile || f.mobile.value;
+      if (!id) { const last = S.db.bookings.filter(x => x.mobile && x.mobile === f.mobile.value && x.contactVia).pop(); if (last) f.contactVia.value = last.contactVia; }
+      f.profile.value = curProfile;
+      if (DI(f.department.value).kind === 'travel' && (!f.passengerDetails.value || f.passengerDetails.dataset.auto === '1')) {
+        f.passengerDetails.value = order.map(c => [c.name, String(c.gender || '').charAt(0), ageOf(c.dob) || ''].filter(Boolean).join(', ')).join('\n');
+        f.passengerDetails.dataset.auto = '1';
+      }
+    }
+    $('#bkPickInfo', m.el).innerHTML = order.length ? `${order.length} selected (max ${maxP()} for this service). Order = order of ticking.` : 'Pick a family above, then tick devotees. Or just type the name and mobile below for a walk-in.';
+    if (order.length > maxP()) $('#bkPickInfo', m.el).innerHTML += ' <b style="color:var(--red)">More than allowed for this service.</b>';
+    recalc(true);
+  };
+  const showMembers = () => {
+    const prof = P.find(p => p.name === curProfile);
+    $('#bkMembers', m.el).innerHTML = prof ? prof.members.map(c => `<div class="pick ${picked.has(c.customerId) ? 'on' : ''}" data-cid="${esc(c.customerId)}"><input type="checkbox" ${picked.has(c.customerId) ? 'checked' : ''}><div class="grow"><b>${esc(c.name)}</b><div class="muted small">${esc(c.gender || '')} · ${ageOf(c.dob) || '?'} yrs · ${maskId(c.idNumber)}</div></div></div>`).join('') : '';
+    $$('#bkMembers .pick', m.el).forEach(el => el.onclick = e => {
+      const cid = el.dataset.cid;
+      if (picked.has(cid)) picked.delete(cid); else picked.add(cid);
+      showMembers(); syncPicked();
+      e.preventDefault();
+    });
+  };
+  const find = q => {
+    q = q.toLowerCase().trim();
+    const res = !q ? [] : P.filter(p => p.name.toLowerCase().includes(q) || p.members.some(c => String(c.name).toLowerCase().includes(q) || String(c.mobile).includes(q))).slice(0, 8);
+    $('#bkFound', m.el).innerHTML = res.map(p => `<span class="chip ${p.name === curProfile ? 'on' : ''}" data-p="${esc(p.name)}">👨‍👩‍👧 ${esc(p.name)} <span class="n">${p.members.length}</span></span>`).join('') || (q ? '<span class="muted small">No match. Use ＋ New devotee.</span>' : '');
+    $$('#bkFound .chip', m.el).forEach(ch => ch.onclick = () => {
+      if (curProfile !== ch.dataset.p) picked.clear();
+      curProfile = ch.dataset.p;
+      const prof = P.find(p => p.name === curProfile);
+      prof.members.slice(0, maxP()).forEach(c => picked.add(c.customerId));
+      find($('#bkFind', m.el).value); showMembers(); syncPicked();
+    });
+  };
+  $('#bkFind', m.el).addEventListener('input', e => find(e.target.value));
+  $('#bkNewCust', m.el).onclick = () => customerForm(null, { profile: curProfile }, saved => {
+    P.splice(0, P.length, ...profiles());
+    curProfile = saved.profile || saved.name; picked.add(saved.customerId);
+    $('#bkFind', m.el).value = curProfile; find(curProfile); showMembers(); syncPicked();
+  });
+  applyDept('keep');
+  f.department.addEventListener('change', () => { applyDept(true); autoRelease(); recalc(true); });
+  f.category.addEventListener('change', () => { f.service.innerHTML = opt(svcOpts(f.category.value), '', '— choose —'); autoRelease(); recalc(true); });
+  f.service.addEventListener('change', () => {
+    recalc(true); showDocs();
+    const s = serviceByName(f.service.value);
+    if (DI(f.department.value).kind === 'app' && !id && s && num(s.daysToComplete)) f.expectedDate.value = iso(new Date(Date.now() + num(s.daysToComplete) * 86400000));
+  });
+  f.persons.addEventListener('input', () => recalc(true));
+  f.ticketAmount.addEventListener('input', () => recalc(false));
+  f.serviceCharge.addEventListener('input', () => recalc(false));
+  if (curProfile) { $('#bkFind', m.el).value = curProfile; find(curProfile); showMembers(); if (!id) { const prof = P.find(p => p.name === curProfile); if (prof && !picked.size) prof.members.slice(0, 6).forEach(c => picked.add(c.customerId)); showMembers(); syncPicked(); } }
+  else syncPicked();
+  if (!id) autoRelease();
+  recalc(false);
+  if (id) $('#bkPickInfo', m.el).textContent = '';
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    if (!f.reportValidity()) return;
+    const d = formData(f);
+    if (id) d.bookingId = id;
+    if (DI(d.department).kind !== 'ttd') { d.category = d.department; d.ttdLogin = ''; d.releaseDate = ''; }
+    if (DI(d.department).kind !== 'app') { delete d.ttdRef; delete d.expectedDate; delete d.documents; }
+    try {
+      const saved = await saveBooking(d, id ? 'Booking updated' : 'Booking created 🎫');
+      m.close();
+      openBooking(saved.bookingId, { scrollMsg: !id });
+    } catch (e) { fail(e); }
+  };
+  setTimeout(() => $('#bkFind', m.el).focus(), 30);
+}
+
+// ---------------------------------------------------------------- release day board
+PAGES.board = () => {
+  const cat = S.boardCat;
+  const recent = iso(new Date(Date.now() - 3 * 86400000));
+  const inCat = b => DI(b).kind === 'ttd' && (!cat || b.category === cat);
+  const cols = [
+    ['Requested', '📝 Requested', S.db.bookings.filter(b => inCat(b) && b.status === 'Requested')],
+    ['Attempting', '⚡ Attempting now', S.db.bookings.filter(b => inCat(b) && b.status === 'Attempting')],
+    ['Booked', '✅ Booked (last 3 days)', S.db.bookings.filter(b => inCat(b) && BOOKED.includes(b.status) && String(b.updatedOn).slice(0, 10) >= recent)],
+    ['Not Booked', '❌ Not booked (last 3 days)', S.db.bookings.filter(b => inCat(b) && FAILED.includes(b.status) && String(b.updatedOn).slice(0, 10) >= recent)]
+  ];
+  const rel = upcomingReleases(cat || undefined)[0];
+  const card = b => `<div class="kcard" draggable="true" data-drag="${esc(b.bookingId)}">
+    <div class="row between"><b style="cursor:pointer" data-act="openBooking" data-id="${esc(b.bookingId)}">${esc(b.customerName)}</b><span class="muted small">${num(b.persons)} 👤</span></div>
+    <div class="small muted">${CAT_ICON[b.category] || ''} ${esc(b.service)}</div>
+    <div class="small">📅 ${fD(b.preferredDate) || 'Any date'}${b.alternateDate ? ' / ' + fD(b.alternateDate) : ''}</div>
+    ${b.ttdLogin ? `<div class="small muted">🔑 ${esc(b.ttdLogin)}</div>` : ''}${b.ttdRef ? `<div class="small"><b>${esc(b.ttdRef)}</b></div>` : ''}
+    <div class="row">${b.status === 'Requested' ? `<button class="btn sm" data-act="markAttempt" data-id="${esc(b.bookingId)}">▶ Start</button>` : ''}
+    ${b.status === 'Requested' || b.status === 'Attempting' ? `<button class="btn sm green" data-act="markBooked" data-id="${esc(b.bookingId)}">✅</button><button class="btn sm red" data-act="markNotBooked" data-id="${esc(b.bookingId)}">❌</button>` : `<button class="btn sm" data-act="openBooking" data-id="${esc(b.bookingId)}">💬 Message</button>`}</div></div>`;
+  return `
+  <div class="card" style="margin-bottom:14px"><div class="row wrap between">
+    <div><b>Release day mode</b><div class="muted small">Work through the queue on quota day. Drag cards between columns, or use the buttons. Each result opens the Telugu message ready to send.</div></div>
+    ${rel ? `<div class="right"><div class="small muted">${esc(rel.label)}</div><div class="cd" style="font-size:22px" data-t="${rel.t}"></div></div>` : ''}
+  </div></div>
+  <div class="chipsRow"><span class="chip ${!cat ? 'on' : ''}" data-act="boardCat" data-cat="">All</span>${S.db.lists.categories.map(c => `<span class="chip ${cat === c ? 'on' : ''}" data-act="boardCat" data-cat="${esc(c)}">${CAT_ICON[c] || ''} ${esc(c)} <span class="n">${S.db.bookings.filter(b => b.category === c && (b.status === 'Requested' || b.status === 'Attempting')).length}</span></span>`).join('')}</div>
+  <div class="kanban">${cols.map(c => `<div class="kcol" data-drop="${c[0]}"><h4>${c[1]} <span class="muted">${c[2].length}</span></h4>${c[2].sort((a, b) => String(a.preferredDate || '9').localeCompare(String(b.preferredDate || '9'))).map(card).join('') || '<div class="muted small" style="padding:10px">Empty</div>'}</div>`).join('')}</div>`;
+};
+AFTER.board = () => {
+  $$('[data-drag]').forEach(el => el.addEventListener('dragstart', e => e.dataTransfer.setData('text/plain', el.dataset.drag)));
+  $$('[data-drop]').forEach(col => {
+    col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('over'); });
+    col.addEventListener('dragleave', () => col.classList.remove('over'));
+    col.addEventListener('drop', e => {
+      e.preventDefault(); col.classList.remove('over');
+      const id = e.dataTransfer.getData('text/plain');
+      const to = col.dataset.drop;
+      if (to === 'Booked') markBooked(id); else if (to === 'Not Booked') markNotBooked(id); else if (to === 'Attempting') markAttempt(id);
+      else saveBooking({ bookingId: id, status: 'Requested' }, 'Moved back to Requested').catch(fail);
+    });
+  });
+};
+
+// ---------------------------------------------------------------- customers
+PAGES.customers = () => {
+  const P = profiles();
+  const q = S.custQ.toLowerCase();
+  const shown = P.filter(p => !q || p.name.toLowerCase().includes(q) || p.members.some(c => [c.name, c.mobile, c.idNumber, c.city].some(v => String(v || '').toLowerCase().replace(/\s/g, '').includes(q.replace(/\s/g, '')))));
+  if (!S.prof || !P.some(p => p.name === S.prof)) S.prof = shown[0] ? shown[0].name : null;
+  const prof = P.find(p => p.name === S.prof);
+  let right = '<div class="card empty"><div class="big">👨‍👩‍👧</div>No customers yet. Add a devotee or import your Excel template.</div>';
+  if (prof) {
+    const c0 = prof.contact;
+    const ids = new Set(prof.members.map(c => c.customerId));
+    const hist = S.db.bookings.filter(b => b.profile === prof.name || String(b.customerIds || '').split(/[,\s]+/).some(x => ids.has(x)) || (c0.mobile && b.mobile === c0.mobile)).sort((a, b) => String(b.requestDate).localeCompare(a.requestDate));
+    const hs = stats(hist);
+    right = `<div class="card">
+      <div class="row wrap between"><div class="row"><div class="avatar" style="width:46px;height:46px;font-size:16px">${initials(prof.name)}</div><div><h3 style="margin:0">${esc(prof.name)}</h3><div class="muted small">${prof.members.length} devotee(s) · ${esc(c0.city || '')}${c0.district ? ', ' + esc(c0.district) : ''}</div></div></div>
+      <div class="row wrap"><button class="btn primary sm" data-act="newBookingFor" data-p="${esc(prof.name)}">🎫 New booking</button><button class="btn sm" data-act="addMember" data-p="${esc(prof.name)}">＋ Add devotee</button>${c0.mobile ? `<a class="btn sm wa" target="_blank" href="${waUrl(c0.mobile, '')}">WhatsApp</a>` : ''}</div></div>
+      <div class="kv" style="margin-top:14px">
+        <div><small>Mobile</small><span>${esc(c0.mobile) || '—'}</span></div><div><small>Email</small><span>${esc(c0.email) || '—'}</span></div>
+        <div style="grid-column:1/-1"><small>Address</small><span>${esc([c0.address, c0.city, c0.district, c0.state, c0.pincode].filter(Boolean).join(', ')) || '—'}</span></div>
+      </div>
+      <div class="row wrap small" style="margin-top:12px;gap:16px"><span>🎫 ${hist.length} bookings</span><span>✅ ${hs.booked}</span><span>❌ ${hs.failed}</span><span>⏳ ${hs.pending}</span><span>💰 ${inr(hs.received)}</span></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>Devotees <span class="act"><label class="small muted"><input type="checkbox" data-act="toggleIds" ${S.showIds ? 'checked' : ''}> Show ID numbers</label></span></h3>
+      <div class="tableWrap"><table class="t"><thead><tr><th>Name</th><th>Age</th><th>Gender</th><th>Photo ID</th><th class="hideM">Gotram</th><th class="hideM">ID</th><th></th></tr></thead><tbody>
+      ${prof.members.map(c => `<tr class="click" data-act="openCustomer" data-id="${esc(c.customerId)}"><td><b>${esc(c.name)}</b><div class="muted small">${esc(c.dob)}</div></td><td>${ageOf(c.dob)}</td><td>${esc(c.gender)}</td><td>${esc(c.idType)}<div class="small">${esc(S.showIds ? c.idNumber : maskId(c.idNumber))}</div></td><td class="hideM">${esc(c.gotram) || '—'}</td><td class="hideM muted small">${esc(c.customerId)}</td><td class="right"><button class="iconBtn" data-act="editCustomer" data-id="${esc(c.customerId)}" title="Edit">✏️</button></td></tr>`).join('')}
+      </tbody></table></div></div>
+    <div class="card" style="margin-top:14px"><h3>Booking history</h3>
+      ${hist.length ? `<div class="tableWrap"><table class="t"><thead><tr><th>Booking</th><th>Service</th><th>Status</th><th>Date</th><th class="right">Paid</th></tr></thead><tbody>${hist.map(b => `<tr class="click" data-act="openBooking" data-id="${esc(b.bookingId)}"><td class="nowrap"><b>${esc(b.bookingId)}</b><div class="muted small">${fD(b.requestDate)}</div></td><td>${esc(b.service)}</td><td>${badge(b.status)}</td><td>${fD(b.serviceDate || b.preferredDate)}</td><td class="right">${inr(b.received)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="muted small">No bookings yet.</div>'}
+    </div>`;
+  }
+  return `
+  <div class="toolbar">
+    <button class="btn primary" data-act="addMember" data-p="">＋ Add devotee</button>
+    <button class="btn" data-act="importCustomers">📥 Import Excel template</button>
+    <button class="btn" data-act="exportExt">⬇ Export for extension</button>
+    <button class="btn ghost" data-act="downloadTemplate">📄 Blank template</button>
+    <span class="muted small" style="margin-left:auto">${S.db.customers.length} devotees · ${P.length} families</span>
+  </div>
+  <div class="split">
+    <div class="card" style="padding:10px"><input class="i" id="custQ" placeholder="Search family, name, mobile, Aadhaar…" value="${esc(S.custQ)}" style="margin-bottom:8px">
+      <div class="plist">${shown.map(p => `<div class="pitem ${p.name === S.prof ? 'on' : ''}" data-act="pickProf" data-p="${esc(p.name)}"><div class="avatar">${initials(p.name)}</div><div class="grow" style="min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</b><span class="muted small">${p.members.length} · ${esc(p.contact.mobile || '')} ${esc(p.contact.city || '')}</span></div></div>`).join('') || '<div class="muted small" style="padding:10px">No match</div>'}</div></div>
+    <div>${right}</div>
+  </div>`;
+};
+AFTER.customers = () => {
+  const q = $('#custQ');
+  q.addEventListener('input', () => { S.custQ = q.value; clearTimeout(S._t); S._t = setTimeout(() => { const p = q.selectionStart; render(); const n = $('#custQ'); n.focus(); n.setSelectionRange(p, p); }, 250); });
+};
+function customerForm(cid, preset, after) {
+  const c = cid ? Object.assign({}, S.db.customers.find(x => x.customerId === cid)) : Object.assign({ country: 'India', state: 'Andhra Pradesh', idType: 'Aadhaar Card' }, preset || {});
+  // New devotee in an existing family: copy the family's address.
+  if (!cid && c.profile) { const p = profiles().find(x => x.name === c.profile); if (p) ['mobile', 'email', 'address', 'city', 'district', 'state', 'pincode', 'country'].forEach(k => { if (!c[k] || k === 'state' || k === 'country') c[k] = p.contact[k] || c[k]; }); }
+  const L = S.db.lists;
+  const m = modal({ title: cid ? '✏️ Edit devotee' : '＋ Add devotee', body: `<form id="fCust" class="grid g3" autocomplete="off">
+    ${fld('Profile / family name', inp('profile', c.profile, 'list="profList" placeholder="e.g. Ramesh Family"'))}
+    <datalist id="profList">${profiles().map(p => `<option value="${esc(p.name)}">`).join('')}</datalist>
+    ${fld('Devotee name (as on ID)', inp('name', c.name, 'required'), 'req span2')}
+    ${fld('Date of birth (DD/MM/YYYY)', inp('dob', c.dob, 'placeholder="14/05/1990" pattern="\\d{1,2}/\\d{1,2}/\\d{4}"'))}
+    ${fld('Gender', sel('gender', L.genders, c.gender, '—'))}
+    ${fld('Gotram (for Homam)', inp('gotram', c.gotram))}
+    ${fld('Photo ID type', sel('idType', L.idTypes, c.idType))}
+    ${fld('Photo ID number', inp('idNumber', c.idNumber), 'span2')}
+    <div class="spanAll muted small" style="margin-top:4px">Family address &amp; contact (same for the whole family)</div>
+    ${fld('Mobile', inp('mobile', c.mobile, 'inputmode="numeric"'))}
+    ${fld('Email ID', inp('email', c.email, 'type="email"'), 'span2')}
+    ${fld('Address', inp('address', c.address), 'spanAll')}
+    ${fld('City / Town', inp('city', c.city))}${fld('District', inp('district', c.district))}${fld('State', sel('state', L.states, c.state))}
+    ${fld('Pincode', inp('pincode', c.pincode, 'inputmode="numeric"'))}${fld('Country', inp('country', c.country))}${fld('Notes', inp('notes', c.notes))}
+  </form>`, foot: `${cid && S.user.role === 'Admin' ? '<button class="btn red" data-del style="margin-right:auto">🗑 Delete</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save devotee</button>` });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  const del = m.el.querySelector('[data-del]');
+  if (del) del.onclick = async () => {
+    if (!await confirmBox('Delete <b>' + esc(c.name) + '</b> from customers?', 'Delete')) return;
+    try { await call('deleteCustomer', { customerId: cid }); S.db.customers = S.db.customers.filter(x => x.customerId !== cid); m.close(); closeDrawer(); render(); toast('Deleted', 'ok'); } catch (e) { fail(e); }
+  };
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const f = $('#fCust', m.el);
+    if (!f.reportValidity()) return;
+    const d = formData(f);
+    if (cid) d.customerId = cid;
+    if (!d.profile) d.profile = d.name;
+    try {
+      const saved = await call('saveCustomer', d);
+      upsertLocal('customers', 'customerId', saved);
+      pushActivity(saved.customerId, cid ? 'Customer edited' : 'Customer added', saved.name);
+      m.close();
+      toast('Devotee saved', 'ok');
+      if (after) after(saved); else { S.prof = saved.profile; if (S.page === 'customers') render(); }
+    } catch (e) { fail(e); }
+  };
+}
+function openCustomer(cid) {
+  const c = S.db.customers.find(x => x.customerId === cid);
+  if (!c) return;
+  closeDrawer();
+  S.prof = c.profile || c.name;
+  S.custQ = '';
+  if (S.page !== 'customers') go('customers'); else render();
+}
+
+// Excel import / export (template format) ----------------------------------
+const TPL_HEAD = ['Profile Name', 'Devotee Name (as on ID)', 'Date of Birth (DD/MM/YYYY)', 'Gender', 'Photo ID Type', 'Photo ID Number', 'Gotram (for Homam)', 'Mobile', 'Email ID', 'Address', 'City / Town', 'District', 'State', 'Pincode', 'Country'];
+const TPL_KEYS = ['profile', 'name', 'dob', 'gender', 'idType', 'idNumber', 'gotram', 'mobile', 'email', 'address', 'city', 'district', 'state', 'pincode', 'country'];
+const HEAD_ALIASES = { profile: ['profile', 'profilename', 'group', 'family'], name: ['devoteename', 'name', 'fullname', 'pilgrimname', 'devotee'], dob: ['dateofbirth', 'dob', 'birthdate'], gender: ['gender', 'sex'], idType: ['photoidtype', 'idtype', 'idproof'], idNumber: ['photoidnumber', 'idnumber', 'aadhaar', 'aadhaarnumber', 'aadharnumber'], gotram: ['gotram', 'gothram', 'gotra'], mobile: ['mobile', 'mobilenumber', 'phone'], email: ['email', 'emailid', 'mailid'], address: ['address'], city: ['city', 'citytown', 'town', 'village'], district: ['district'], state: ['state'], pincode: ['pincode', 'pin'], country: ['country'] };
+const normH = h => String(h == null ? '' : h).replace(/\(.*?\)/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+function serialToDmy(n) { const d = new Date(Math.round((n - 25569) * 86400000)); return pad(d.getUTCDate()) + '/' + pad(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); }
+function parseTemplate(wb) {
+  for (const name of [...wb.SheetNames].sort((a, b) => (/devotee/i.test(b) ? 1 : 0) - (/devotee/i.test(a) ? 1 : 0))) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' });
+    for (let h = 0; h < Math.min(10, rows.length); h++) {
+      const cols = rows[h].map(x => Object.keys(HEAD_ALIASES).find(k => HEAD_ALIASES[k].includes(normH(x))) || null);
+      if (!cols.includes('name')) continue;
+      const out = [];
+      let last = null;
+      for (const row of rows.slice(h + 1)) {
+        const r = {};
+        cols.forEach((k, i) => { if (k && r[k] === undefined) r[k] = row[i]; });
+        if (!Object.values(r).some(v => String(v).trim())) continue;
+        if (/^example/i.test(String(r.profile || ''))) { last = 'EXAMPLE'; continue; }
+        if (!String(r.profile || '').trim() && last === 'EXAMPLE') continue;
+        Object.keys(r).forEach(k => { r[k] = typeof r[k] === 'number' && k !== 'dob' ? (Number.isInteger(r[k]) ? r[k].toFixed(0) : String(r[k])) : String(r[k]).trim(); });
+        if (typeof row[cols.indexOf('dob')] === 'number') r.dob = serialToDmy(row[cols.indexOf('dob')]);
+        else if (/^\d{4}-\d{2}-\d{2}/.test(r.dob)) { const [y, mo, d] = r.dob.slice(0, 10).split('-'); r.dob = d + '/' + mo + '/' + y; }
+        if (!r.name) continue;
+        // Profile and address on the first row of a family carry down to the rows below.
+        if (r.profile) last = r; else if (last && last !== 'EXAMPLE') { r.profile = last.profile; ['mobile', 'email', 'address', 'city', 'district', 'state', 'pincode', 'country'].forEach(k => { if (!r[k]) r[k] = last[k] || ''; }); }
+        else r.profile = r.name;
+        out.push(r);
+      }
+      return out;
+    }
+  }
+  throw new Error('No "Devotee Name" column found. Use the TTD Devotees template.');
+}
+function importCustomers() {
+  if (typeof XLSX === 'undefined') return toast('Excel library did not load. Check internet and refresh.', 'err');
+  const m = modal({ title: '📥 Import devotees from Excel', body: `
+    <p class="muted" style="margin-top:0">Use the same <b>TTD-Devotees-Template.xlsx</b> as the Chrome extension. One row per devotee; profile name &amp; address on the first row of each family. A devotee with the same family, name and date of birth is updated, not duplicated.</p>
+    <label class="btn primary"><input type="file" id="impFile" accept=".xlsx,.xls,.csv" hidden> Choose Excel file…</label>
+    <div id="impPrev" style="margin-top:14px"></div>`, foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok disabled>Import</button>' });
+  let rows = null;
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  $('#impFile', m.el).onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      rows = parseTemplate(wb);
+      const fams = new Set(rows.map(r => r.profile)).size;
+      $('#impPrev', m.el).innerHTML = `<div class="alert ok">${rows.length} devotee(s) in ${fams} famil${fams === 1 ? 'y' : 'ies'} found in <b>${esc(file.name)}</b></div>
+        <div class="tableWrap" style="max-height:300px"><table class="t"><thead><tr><th>Family</th><th>Name</th><th>DOB</th><th>Gender</th><th>ID</th><th>Mobile</th><th>City</th></tr></thead><tbody>
+        ${rows.slice(0, 100).map(r => `<tr><td>${esc(r.profile)}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.dob)}</td><td>${esc(r.gender)}</td><td>${esc(r.idType)} ${maskId(r.idNumber)}</td><td>${esc(r.mobile)}</td><td>${esc(r.city)}</td></tr>`).join('')}</tbody></table></div>`;
+      m.el.querySelector('[data-ok]').disabled = !rows.length;
+    } catch (err) { $('#impPrev', m.el).innerHTML = `<div class="alert bad">${esc(err.message)}</div>`; }
+  };
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    try {
+      const r = await call('importCustomers', { rows });
+      S.db.customers = r.customers;
+      pushActivity('Customers', 'Excel import', r.added + ' added, ' + r.updated + ' updated');
+      m.close(); render();
+      toast(`Imported: ${r.added} added, ${r.updated} updated`, 'ok');
+    } catch (e) { fail(e); }
+  };
+}
+function downloadXlsx(aoa, sheetName, file, widths) {
+  if (typeof XLSX === 'undefined') return toast('Excel library did not load', 'err');
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  if (widths) ws['!cols'] = widths.map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, file);
+}
+function exportExt() {
+  const pend = new Set();
+  S.db.bookings.filter(b => b.status === 'Requested' || b.status === 'Attempting').forEach(b => String(b.customerIds || '').split(/[,\s]+/).forEach(x => x && pend.add(x)));
+  const m = modal({ title: '⬇ Export devotees for the Chrome extension', size: 'sm', body: `<p class="muted" style="margin-top:0">Makes an Excel in the extension's template format. In the extension: Options › Import from Excel. (Or use “Pull from Google Sheet” in extension v1.5 — no file needed.)</p>
+    <div class="grid"><button class="btn primary" data-w="pending">Only devotees with pending bookings (${pend.size})</button><button class="btn" data-w="all">All devotees (${S.db.customers.length})</button></div>`, noFocus: true });
+  $$('[data-w]', m.el).forEach(b => b.onclick = () => {
+    const list = S.db.customers.filter(c => b.dataset.w === 'all' || pend.has(c.customerId));
+    downloadXlsx([TPL_HEAD].concat(list.map(c => TPL_KEYS.map(k => k === 'profile' ? (c.profile || c.name) : (c[k] || '')))), 'Devotees', 'TTD-Devotees-for-Extension.xlsx', [16, 26, 14, 10, 14, 18, 14, 12, 24, 26, 14, 14, 16, 9, 9]);
+    m.close();
+  });
+}
+
+// ---------------------------------------------------------------- services
+PAGES.services = () => {
+  const groups = [];
+  ((S.db.depts) || []).forEach(d => {
+    if (S.svcDept && S.svcDept !== d[0]) return;
+    if (d[2] === 'ttd') S.db.lists.categories.forEach(cat => groups.push([d[1] + ' TTD · ' + (CAT_ICON[cat] || '') + ' ' + cat, S.db.services.filter(s => DI(s).name === 'TTD' && s.category === cat)]));
+    else groups.push([d[1] + ' ' + d[0], S.db.services.filter(s => DI(s).name === d[0])]);
+  });
+  return `<div class="toolbar"><button class="btn primary" data-act="editService" data-id="">＋ Add service</button>
+    <select class="i" style="width:auto" id="svcDept">${opt(deptOpts(), S.svcDept || '', 'All departments')}</select>
+    <span class="muted small">Prices and fees are a starting point. Check the official sites and keep them up to date.</span></div>
+  ${groups.map(([title, list]) => { if (!list.length) return ''; return `<div class="card" style="margin-bottom:14px"><h3>${esc(title)} <span class="muted">${list.length}</span></h3>
+    <div class="tableWrap"><table class="t"><thead><tr><th>Service</th><th class="right">Price / fee</th><th>Per</th><th class="hideM">Max</th><th class="right hideM">Service charge</th><th class="hideM">Mode</th><th class="hideM">Release</th><th>Active</th></tr></thead><tbody>
+    ${list.map(s => `<tr class="click" data-act="editService" data-id="${esc(s.serviceId)}"><td><b>${esc(s.name)}</b><div class="muted small">${esc(s.reportingPoint || '')}</div></td><td class="right">${inr(s.price)}</td><td>${esc(s.per)}</td><td class="hideM">${esc(s.maxPersons)}</td><td class="right hideM">${inr(s.serviceCharge)}</td><td class="hideM"><span class="cat">${esc(s.mode)}</span></td><td class="hideM">${s.releaseDay ? esc(s.releaseDay) + 'th · ' + esc(s.releaseTime) : '—'}</td><td>${s.active === 'No' ? '❌' : '✅'}</td></tr>`).join('')}
+    </tbody></table></div></div>`; }).join('')}`;
+};
+AFTER.services = () => { const el = $('#svcDept'); if (el) el.onchange = () => { S.svcDept = el.value; render(); }; };
+function editService(id) {
+  const s = id ? Object.assign({}, S.db.services.find(x => x.serviceId === id)) : { department: S.svcDept || 'TTD', category: 'Darshan', per: 'Person', maxPersons: 6, active: 'Yes', mode: S.svcDept && S.svcDept !== 'TTD' ? 'Online' : 'Online Quota' };
+  const L = S.db.lists;
+  const m = modal({ title: id ? '✏️ Edit service' : '＋ Add service', body: `<form id="fSvc" class="grid g3">
+    ${fld('Department', sel('department', deptOpts(), DI(s).name))}${fld('Category (TTD only)', sel('category', L.categories, s.category))}${fld('Service name', inp('name', s.name, 'required'), 'req')}
+    ${fld('Ticket price / govt fee (₹)', inp('price', s.price, 'type="number" min="0"'))}${fld('Price per', sel('per', ['Person', 'Couple', 'Room', 'Booking'], s.per))}${fld('Max persons / booking', inp('maxPersons', s.maxPersons, 'type="number" min="1"'))}
+    ${fld('Service charge (₹)', inp('serviceCharge', s.serviceCharge, 'type="number" min="0"'))}${fld('Booking mode', sel('mode', L.bookingModes, s.mode))}${fld('Active', sel('active', L.yesNo, s.active))}
+    ${fld('Usual release day', inp('releaseDay', s.releaseDay, 'type="number" min="1" max="31"'))}${fld('Release time', inp('releaseTime', s.releaseTime, 'placeholder="10:00"'))}${fld('Reporting point', inp('reportingPoint', s.reportingPoint))}
+    ${fld('Documents needed (comma separated)', inp('documents', s.documents), 'span2')}${fld('Usual days to complete', inp('daysToComplete', s.daysToComplete, 'type="number" min="0"'))}
+    ${fld('Notes', inp('notes', s.notes), 'spanAll')}</form>`,
+    foot: `${id && S.user.role === 'Admin' ? '<button class="btn red" data-del style="margin-right:auto">🗑 Delete</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>` });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  const del = m.el.querySelector('[data-del]');
+  if (del) del.onclick = async () => { if (!await confirmBox('Delete service <b>' + esc(s.name) + '</b>? Old bookings keep their service name.', 'Delete')) return; try { await call('deleteService', { serviceId: id }); S.db.services = S.db.services.filter(x => x.serviceId !== id); m.close(); render(); } catch (e) { fail(e); } };
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const f = $('#fSvc', m.el); if (!f.reportValidity()) return;
+    const d = formData(f); if (id) d.serviceId = id; if (d.department !== 'TTD') d.category = d.department;
+    try { const saved = await call('saveService', d); upsertLocal('services', 'serviceId', saved); m.close(); render(); toast('Service saved', 'ok'); } catch (e) { fail(e); }
+  };
+}
+
+// ---------------------------------------------------------------- releases
+PAGES.releases = () => {
+  const mk = S.relMonth;
+  const list = S.db.releases.filter(r => String(r.releaseDate).slice(0, 7) === mk).map(r => Object.assign({ t: releaseTime(r) }, r)).sort((a, b) => a.t - b.t);
+  const now = Date.now();
+  return `<div class="toolbar">
+    <button class="btn" data-act="relMonth" data-d="-1">‹</button><b style="min-width:110px;text-align:center">${ymLabel(mk)}</b><button class="btn" data-act="relMonth" data-d="1">›</button>
+    <button class="btn primary" data-act="editRelease" data-id="">＋ Add release</button><button class="btn" data-act="addPattern">⚙ Add usual dates for ${ymLabel(mk)}</button>
+    <span class="muted small">TTD announces exact dates every month — update them here. Darshan quota is usually released ~3 months ahead.</span></div>
+  <div class="card"><div class="list">${list.map(r => { const d = new Date(r.t); const n = S.db.bookings.filter(b => b.category === r.category && (b.status === 'Requested' || b.status === 'Attempting')).length; return `<div class="li" data-act="editRelease" data-id="${esc(r.releaseId)}"><div class="date"><b>${d.getDate()}</b><small>${DAY[d.getDay()]}</small></div><div class="main2"><b>${esc(r.label)}</b><span class="muted small">${CAT_ICON[r.category] || ''} ${esc(r.category)} · ${esc(r.releaseTime)} · quota for ${esc(r.quotaMonth || '—')} ${r.notes ? '· ' + esc(r.notes) : ''}</span></div>${r.t > now ? `<div class="right"><span class="cd small" data-t="${r.t}"></span><div class="muted small">${n} waiting</div></div>` : '<span class="muted small">Done</span>'}</div>`; }).join('') || '<div class="empty"><div class="big">📅</div>No release dates for this month.<br><button class="btn primary" style="margin-top:10px" data-act="addPattern">Add usual dates</button></div>'}</div></div>`;
+};
+function editRelease(id) {
+  const r = id ? Object.assign({}, S.db.releases.find(x => x.releaseId === id)) : { releaseDate: S.relMonth + '-24', releaseTime: '10:00', category: 'Darshan' };
+  const m = modal({ title: id ? '✏️ Edit release' : '＋ Add release', size: 'sm', body: `<form id="fRel" class="grid">
+    ${fld('Release', inp('label', r.label, 'required placeholder="e.g. Special Entry Darshan (₹300) - Feb quota"'), 'req')}
+    ${fld('Category', sel('category', S.db.lists.categories, r.category))}
+    <div class="grid g2">${fld('Date', inp('releaseDate', r.releaseDate, 'type="date" required'))}${fld('Time', inp('releaseTime', r.releaseTime, 'type="time"'))}</div>
+    ${fld('Quota for month', inp('quotaMonth', r.quotaMonth, 'placeholder="Feb 2027"'))}${fld('Notes', inp('notes', r.notes))}</form>`,
+    foot: `${id ? '<button class="btn red" data-del style="margin-right:auto">🗑</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>` });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  const del = m.el.querySelector('[data-del]');
+  if (del) del.onclick = async () => { try { await call('deleteRelease', { releaseId: id }); S.db.releases = S.db.releases.filter(x => x.releaseId !== id); m.close(); render(); } catch (e) { fail(e); } };
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const f = $('#fRel', m.el); if (!f.reportValidity()) return;
+    const d = formData(f); if (id) d.releaseId = id;
+    try { const saved = await call('saveRelease', d); upsertLocal('releases', 'releaseId', saved); m.close(); render(); toast('Release saved', 'ok'); } catch (e) { fail(e); }
+  };
+}
+
+// ---------------------------------------------------------------- TTD logins
+PAGES.logins = () => `<div class="toolbar"><button class="btn primary" data-act="editLogin" data-id="">＋ Add TTD login</button><span class="muted small">Track which TTD account (mobile number) was used for each booking. Passwords / OTPs are never stored.</span></div>
+  <div class="kpis">${S.db.logins.map(l => {
+    const list = S.db.bookings.filter(b => b.ttdLogin === l.loginId);
+    const st = stats(list);
+    const mo = list.filter(b => String(b.updatedOn).slice(0, 7) === ym(new Date())).length;
+    const last = list.map(b => b.updatedOn).sort().pop();
+    return `<div class="kpi" data-act="editLogin" data-id="${esc(l.loginId)}" data-go="1"><div class="bar" style="background:${l.status === 'Active' || !l.status ? COLORS.booked : COLORS.failed}"></div><span class="emo">🔑</span>
+      <div class="lbl">${esc(l.holder || 'Account')}</div><div class="val" style="font-size:20px">${esc(l.loginId)}</div>
+      <div class="sub">${esc(l.status || 'Active')} · ${list.length} bookings · ✅ ${st.booked} · ❌ ${st.failed} · ${st.rate}%</div>
+      <div class="sub">This month: ${mo} · Last used ${last ? fD(last) : '—'}</div>
+      <div class="sub" style="margin-top:6px"><a href="#" data-act="loginBookings" data-id="${esc(l.loginId)}">View bookings →</a></div></div>`;
+  }).join('') || '<div class="card empty"><div class="big">🔑</div>No TTD logins yet.</div>'}</div>`;
+function editLogin(id) {
+  const l = id ? Object.assign({}, S.db.logins.find(x => x.loginId === id)) : { status: 'Active' };
+  const m = modal({ title: id ? '✏️ Edit TTD login' : '＋ Add TTD login', size: 'sm', body: `<form id="fLog" class="grid">
+    ${fld('Login mobile number', inp('loginId', l.loginId, (id ? 'readonly ' : '') + 'required inputmode="numeric" pattern="[0-9]{10}"'), 'req')}
+    ${fld('Account holder', inp('holder', l.holder))}${fld('Email', inp('email', l.email, 'type="email"'))}
+    ${fld('Status', sel('status', S.db.lists.loginStatuses, l.status))}${fld('Notes', inp('notes', l.notes))}</form>`,
+    foot: `${id && S.user.role === 'Admin' ? '<button class="btn red" data-del style="margin-right:auto">🗑</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>` });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  const del = m.el.querySelector('[data-del]');
+  if (del) del.onclick = async () => { try { await call('deleteLogin', { loginId: id }); S.db.logins = S.db.logins.filter(x => x.loginId !== id); m.close(); render(); } catch (e) { fail(e); } };
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const f = $('#fLog', m.el); if (!f.reportValidity()) return;
+    try { const saved = await call('saveLogin', formData(f)); upsertLocal('logins', 'loginId', saved); m.close(); render(); toast('Login saved', 'ok'); } catch (e) { fail(e); }
+  };
+}
+
+// ---------------------------------------------------------------- message templates
+PAGES.messages = () => {
+  const t = S.db.messages.find(m => m.key === S.msgKey) || S.db.messages[0];
+  if (!t) return '<div class="card empty">No templates. Run “Set up / repair sheet” from the Google Sheet menu.</div>';
+  S.msgKey = t.key;
+  const sample = S.db.bookings.find(b => pickTemplate(b) === t.key) || S.db.bookings[S.db.bookings.length - 1] || { customerName: 'Ramesh', service: 'Special Entry Darshan (₹300)', bookingId: 'TTD-2611-0001', ttdRef: 'SED123456789', serviceDate: todayIso(), slot: '10:00 AM', persons: 2, devotees: 'Ramesh, Lakshmi', ticketAmount: 600, received: 800, refundAmount: 800, category: 'Darshan' };
+  const ph = ['name', 'service', 'expectedDate', 'balance', 'remarks', 'route', 'operator', 'vehicleNo', 'travelClass', 'quota', 'boardingPoint', 'seatInfo', 'ticketStatus', 'bookingId', 'ttdRef', 'serviceDate', 'slot', 'reportingPoint', 'persons', 'devotees', 'ticketAmount', 'total', 'received', 'refundAmount', 'refundDate', 'refundMode', 'preferredDate', 'releaseDate', 'nextRelease', 'room', 'checkIn', 'checkOut', 'shopNameTe', 'groupNameTe', 'shopName', 'groupName', 'shopPhone', 'shopAddress'];
+  return `<div class="split">
+    <div class="card" style="padding:10px">${S.db.messages.map(m => `<div class="pitem ${m.key === t.key ? 'on' : ''}" data-act="msgKey" data-k="${esc(m.key)}"><div class="grow"><b style="display:block">${esc(m.name)}</b><span class="muted small">${esc(m.key)}</span></div></div>`).join('')}</div>
+    <div class="card">
+      <h3>${esc(t.name)} <span class="act row" style="gap:8px"><span class="seg"><button class="${S.tplChan === 'wa' ? 'on' : ''}" data-act="tplChan" data-c="wa">🟢 WhatsApp</button><button class="${S.tplChan === 'sms' ? 'on' : ''}" data-act="tplChan" data-c="sms">📱 SMS (short)</button></span><span class="seg"><button class="${S.lang === 'Telugu' ? 'on' : ''}" data-act="tplLang" data-l="Telugu">తెలుగు</button><button class="${S.lang === 'English' ? 'on' : ''}" data-act="tplLang" data-l="English">English</button></span></span></h3>
+      ${S.tplChan === 'sms' ? '<div class="small muted" style="margin-bottom:8px">Keep SMS short: Telugu SMS are billed per 70 characters (English per 160). Emojis and *bold* are removed when sending.</div>' : ''}
+      <div class="muted small" style="margin-bottom:6px">Click a field to insert it:</div>
+      <div style="margin-bottom:10px">${ph.map(p => `<span class="ph" data-act="insPh" data-p="${p}">{${p}}</span>`).join('')}</div>
+      <div class="grid g2">
+        <div><textarea class="i te" id="tplText" rows="${S.tplChan === 'sms' ? 8 : 22}" style="font-size:13px">${esc(t[tplField()] || '')}</textarea>${S.tplChan === 'sms' ? '<div class="small muted" id="tplCount" style="margin-top:4px"></div>' : ''}
+        <div class="row" style="margin-top:10px"><button class="btn primary" data-act="saveTpl">💾 Save template</button><span class="muted small">*bold* works on WhatsApp</span></div></div>
+        <div><div class="muted small" style="margin-bottom:6px">Preview (${esc(sample.customerName)})</div><div class="msgBox" id="tplPrev" ${S.tplChan === 'sms' ? 'style="background:var(--panel);color:var(--ink);border-color:var(--line)"' : ''}></div></div>
+      </div>
+    </div></div>`;
+};
+AFTER.settings = () => {
+  const pv = $('#smsProv');
+  if (!pv) return;
+  const tag = v => /^Fast/.test(v) ? 'fast' : /^Android/.test(v) ? 'android' : /^Custom/.test(v) ? 'custom' : 'none';
+  const upd = () => { const t = tag(pv.value); $$('#fSms [data-for]').forEach(el => { const on = el.dataset.for.split(' ').includes(t); el.classList.toggle('hide', !on); el.hidden = false; }); };
+  pv.addEventListener('change', upd);
+  upd();
+};
+AFTER.messages = () => {
+  const ta = $('#tplText');
+  if (!ta) return;
+  const t = S.db.messages.find(m => m.key === S.msgKey);
+  const sample = S.db.bookings.find(b => pickTemplate(b) === t.key) || S.db.bookings[S.db.bookings.length - 1] || { customerName: 'Ramesh', service: 'Special Entry Darshan (₹300)', bookingId: 'TTD-2611-0001', ttdRef: 'SED123456789', serviceDate: todayIso(), persons: 2, ticketAmount: 600, received: 800, refundAmount: 800, category: 'Darshan' };
+  const upd = () => {
+    const tmp = { key: '__p', telugu: ta.value, english: ta.value, smsTelugu: ta.value, smsEnglish: ta.value };
+    S.db.messages.push(tmp);
+    const out = buildMsg(sample, '__p', S.lang, S.tplChan);
+    $('#tplPrev').textContent = out;
+    S.db.messages.pop();
+    if ($('#tplCount')) $('#tplCount').innerHTML = 'Preview: ' + smsInfo(out);
+  };
+  ta.addEventListener('input', upd);
+  upd();
+};
+
+function tplField() { return S.tplChan === 'sms' ? (S.lang === 'English' ? 'smsEnglish' : 'smsTelugu') : (S.lang === 'English' ? 'english' : 'telugu'); }
+
+// ---------------------------------------------------------------- reports
+PAGES.reports = () => {
+  const r = periodRange(S.rep);
+  const list = S.db.bookings.filter(b => inRange(b.requestDate, r));
+  const st = stats(list);
+  const group = key => { const m = new Map(); list.forEach(b => { const k = b[key] || '—'; if (!m.has(k)) m.set(k, []); m.get(k).push(b); }); return [...m.entries()].map(([k, v]) => [k, stats(v)]).sort((a, b) => b[1].total - a[1].total); };
+  const table = (title, rows, label) => `<div class="card"><h3>${title}</h3><div class="tableWrap"><table class="t"><thead><tr><th>${label}</th><th class="right">Requests</th><th class="right">Booked</th><th class="right">Not booked</th><th class="right">Pending</th><th class="right">Success</th><th class="right">Received</th><th class="right">Service income</th></tr></thead><tbody>
+    ${rows.map(([k, s]) => `<tr><td><b>${esc(k)}</b></td><td class="right">${s.total}</td><td class="right">${s.booked}</td><td class="right">${s.failed}</td><td class="right">${s.pending}</td><td class="right">${s.rate}%</td><td class="right">${inr(s.received)}</td><td class="right">${inr(s.income)}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">No data</td></tr>'}
+    </tbody></table></div></div>`;
+  const refunds = S.db.bookings.filter(b => b.refundStatus && b.refundStatus !== 'Not Applicable' && (inRange(b.requestDate, r) || inRange(b.refundDate, r)));
+  return `<div class="toolbar"><div class="seg">${[['month', 'This month'], ['last', 'Last month'], ['q', '3 months'], ['year', 'This year'], ['all', 'All']].map(p => `<button class="${S.rep === p[0] ? 'on' : ''}" data-act="rep" data-p="${p[0]}">${p[1]}</button>`).join('')}</div>
+    <button class="btn" data-act="exportReport">⬇ Export bookings (Excel)</button><button class="btn" data-act="exportRefunds">⬇ Refund register</button></div>
+  <div class="kpis">
+    <div class="kpi"><div class="bar" style="background:${COLORS.maroon}"></div><div class="lbl">Requests</div><div class="val">${st.total}</div><div class="sub">${st.persons} devotees booked</div></div>
+    <div class="kpi"><div class="bar" style="background:${COLORS.booked}"></div><div class="lbl">Success rate</div><div class="val">${st.rate}%</div><div class="sub">✅ ${st.booked} · ❌ ${st.failed}</div></div>
+    <div class="kpi"><div class="bar" style="background:${COLORS.gold}"></div><div class="lbl">Received</div><div class="val">${inr(st.received)}</div><div class="sub">Refunded ${inr(st.refunded)}</div></div>
+    <div class="kpi"><div class="bar" style="background:${COLORS.blue}"></div><div class="lbl">Service income</div><div class="val">${inr(st.income)}</div><div class="sub">Ticket value ${inr(st.ticket)}</div></div>
+  </div>
+  <div class="grid" style="margin-top:16px">
+    ${table('🏢 By department', deptRows(list), 'Department')}
+    ${dailyTable(list)}
+    ${table('🛕 By service', group('service'), 'Service')}
+    <div class="grid g2">${table('🔑 By TTD login', group('ttdLogin'), 'Login')}${table('👤 By staff', group('handledBy'), 'Staff')}</div>
+    <div class="card"><h3>↩️ Refund register <span class="muted">${refunds.length}</span></h3><div class="tableWrap"><table class="t"><thead><tr><th>Booking</th><th>Customer</th><th>Status</th><th class="right">Amount</th><th>Date</th><th>Mode</th></tr></thead><tbody>
+      ${refunds.map(b => `<tr class="click" data-act="openBooking" data-id="${esc(b.bookingId)}"><td><b>${esc(b.bookingId)}</b></td><td>${esc(b.customerName)}<div class="muted small">${esc(b.mobile)}</div></td><td>${rBadge(b.refundStatus)}</td><td class="right">${inr(b.refundAmount)}</td><td>${fD(b.refundDate)}</td><td>${esc(b.refundMode)}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">No refunds</td></tr>'}
+    </tbody></table></div></div>
+  </div>`;
+};
+function dailyTable(list) {
+  const m = new Map();
+  list.forEach(b => { const d = String(b.requestDate).slice(0, 10); if (!m.has(d)) m.set(d, []); m.get(d).push(b); });
+  const rows = [...m.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  const tot = stats(list), tq = list.filter(b => DI(b).kind === 'quick');
+  return `<div class="card"><h3>📅 Daily income <span class="muted">${rows.length} days</span></h3><p class="muted small" style="margin-top:-4px">Received = all money taken (bill and ticket amounts included). Service income = your charges on finished work only.</p><div class="tableWrap"><table class="t"><thead><tr><th>Date</th><th class="right">Entries</th><th class="right">⚡ Quick sales</th><th class="right">Received</th><th class="right">Refunded</th><th class="right">Service income</th></tr></thead><tbody>
+    ${rows.map(([d, v]) => { const x = stats(v), q = v.filter(b => DI(b).kind === 'quick'); return `<tr><td><b>${fD(d)}</b></td><td class="right">${x.total}</td><td class="right">${q.length} · ${inr(stats(q).received)}</td><td class="right">${inr(x.received)}</td><td class="right">${inr(x.refunded)}</td><td class="right">${inr(x.income)}</td></tr>`; }).join('')}
+    <tr><td><b>Total</b></td><td class="right"><b>${tot.total}</b></td><td class="right"><b>${tq.length} · ${inr(stats(tq).received)}</b></td><td class="right"><b>${inr(tot.received)}</b></td><td class="right"><b>${inr(tot.refunded)}</b></td><td class="right"><b>${inr(tot.income)}</b></td></tr>
+    </tbody></table></div></div>`;
+}
+const BK_COLS = [['bookingId', 'Booking ID'], ['department', 'Department'], ['requestDate', 'Request Date'], ['profile', 'Family'], ['customerName', 'Customer'], ['mobile', 'Mobile'], ['devotees', 'Devotees'], ['persons', 'Persons'], ['category', 'Category'], ['service', 'Service'], ['preferredDate', 'Preferred Date'], ['ttdLogin', 'TTD Login'], ['status', 'Status'], ['ttdRef', 'TTD Ref'], ['serviceDate', 'Darshan Date'], ['slot', 'Slot'], ['ticketAmount', 'Ticket ₹'], ['serviceCharge', 'Service ₹'], ['total', 'Total ₹'], ['received', 'Received ₹'], ['paymentMode', 'Payment Mode'], ['refundStatus', 'Refund Status'], ['refundAmount', 'Refund ₹'], ['refundDate', 'Refund Date'], ['messageStatus', 'Message'], ['handledBy', 'Handled By'], ['remarks', 'Remarks'], ['fromPlace', 'From'], ['toPlace', 'To'], ['vehicleNo', 'Train/Bus/Flight No'], ['seatInfo', 'Seat'], ['ticketStatus', 'Ticket Status'], ['expectedDate', 'Expected Date'], ['documents', 'Documents']];
+const exportList = (list, file) => downloadXlsx([BK_COLS.map(c => c[1])].concat(list.map(b => BK_COLS.map(c => b[c[0]] == null ? '' : b[c[0]]))), 'Bookings', file);
+
+// ---------------------------------------------------------------- activity
+PAGES.activity = () => `<div class="toolbar"><button class="btn" data-act="reloadActivity">↻ Load latest</button><span class="muted small">Every change made from the dashboard or the extension is recorded in the “Activity Log” tab.</span></div>
+  <div class="tableWrap"><table class="t"><thead><tr><th>Time</th><th>User</th><th>Record</th><th>Action</th><th>Details</th></tr></thead><tbody>
+  ${S.db.activity.map(a => `<tr ${String(a.ref).indexOf('-') > 0 ? `class="click" data-act="openBooking" data-id="${esc(a.ref)}"` : ''}><td class="nowrap">${fDT(a.time)}</td><td>${esc(a.user)}</td><td><b>${esc(a.ref)}</b></td><td>${esc(a.action)}</td><td class="muted small">${esc(a.details)}</td></tr>`).join('')}
+  </tbody></table></div>`;
+
+// ---------------------------------------------------------------- settings
+PAGES.settings = () => {
+  const s = S.db.settings, admin = S.user.role === 'Admin';
+  const url = S.db.webAppUrl || '(deploy the web app to see the URL)';
+  return `<div class="grid g2">
+  <div class="card"><h3>🏪 Shop details <span class="muted">used in every message</span></h3>
+    <form id="fSet" class="grid g2">
+      ${fld('Shop name (English)', inp('shopName', s.shopName))}${fld('Shop name (Telugu)', inp('shopNameTe', s.shopNameTe, 'class="i te"'))}
+      ${fld('Group name (English)', inp('groupName', s.groupName))}${fld('Group name (Telugu)', inp('groupNameTe', s.groupNameTe))}
+      ${fld('Phone (printed in messages)', inp('shopPhone', s.shopPhone))}${fld('Default message language', sel('defaultLanguage', ['Telugu', 'English'], s.defaultLanguage))}
+      ${fld('Shop address', inp('shopAddress', s.shopAddress), 'spanAll')}
+      ${fld('Receipt note (Telugu)', inp('receiptNoteTe', s.receiptNoteTe), 'spanAll')}
+      ${fld('Receipt note (English)', inp('receiptNote', s.receiptNote), 'spanAll')}
+      ${fld('Receipt note, other services (Telugu)', inp('receiptNoteOtherTe', s.receiptNoteOtherTe), 'spanAll')}
+      ${fld('Receipt note, other services (English)', inp('receiptNoteOther', s.receiptNoteOther), 'spanAll')}
+      ${fld('IRCTC agent ID', inp('irctcAgentId', s.irctcAgentId))}
+      ${fld('Receipt paper size', sel('receiptSize', [['A4', 'A4'], ['A5', 'A5 (half page)'], ['80mm', '80mm thermal printer']], s.receiptSize || 'A5'))}
+      ${fld('Default service charge (₹)', inp('defaultServiceCharge', s.defaultServiceCharge, 'type="number"'))}${fld('Booking ID prefix', inp('bookingPrefix', s.bookingPrefix))}
+    </form>
+    <div class="row" style="margin-top:12px">${admin ? '<button class="btn primary" data-act="saveSettings">💾 Save</button>' : '<span class="muted small">Only an Admin can change these.</span>'}</div></div>
+  <div class="card"><h3>🧩 Chrome extension link</h3>
+    <p class="muted small" style="margin-top:0">In the extension (v1.5): Options › <b>Google Sheet</b> tab. Paste these two values and click Test.</p>
+    ${fld('Web app URL', `<input class="i" readonly value="${esc(url)}" onclick="this.select()">`)}
+    <div style="height:10px"></div>
+    ${fld('API key', `<input class="i" readonly value="${esc(admin ? s.apiKey || '(not created yet)' : s.apiKey)}" onclick="this.select()">`)}
+    <div class="row" style="margin-top:12px">${admin ? `<button class="btn" data-act="newKey">${s.apiKey ? '🔄 Make a new key' : '🔑 Create API key'}</button>` : ''}<span class="muted small">A new key stops the old one working.</span></div></div>
+  <div class="card"><h3>📱 SMS <span class="muted">for customers without WhatsApp</span></h3>
+    ${admin ? smsSettingsHtml(s) : `<p class="muted small" style="margin:0">SMS gateway: <b>${esc(s.smsProvider || 'None')}</b>. Only an Admin can change it.</p>`}</div>
+  <div class="card"><h3>⏰ Automatic reminder SMS</h3>
+    ${admin ? reminderSettingsHtml(s) : `<p class="muted small" style="margin:0">Automatic reminders: <b>${esc(s.autoReminder || 'Off')}</b>. Only an Admin can change it.</p>`}</div>
+  ${admin ? `<div class="card"><h3>👥 Users &amp; PINs</h3>
+    <div class="tableWrap"><table class="t"><thead><tr><th>Name</th><th>Role</th><th>Active</th><th></th></tr></thead><tbody>${S.db.users.map(u => `<tr><td><b>${esc(u.name)}</b></td><td>${esc(u.role)}</td><td>${esc(u.active)}</td><td class="right"><button class="btn sm" data-act="editUser" data-n="${esc(u.name)}">Edit</button></td></tr>`).join('')}</tbody></table></div>
+    <button class="btn" style="margin-top:10px" data-act="editUser" data-n="">＋ Add staff user</button></div>` : ''}
+  <div class="card"><h3>🔐 My PIN</h3><form id="fPin" class="grid g2">${fld('Current PIN', '<input class="i" name="oldPin" type="password" inputmode="numeric">')}${fld('New PIN (4-8 digits)', '<input class="i" name="newPin" type="password" inputmode="numeric">')}</form>
+    <button class="btn primary" style="margin-top:12px" data-act="changePin">Change PIN</button>
+    <p class="muted small">Your data lives in your Google Sheet (Google Drive). Customer ID numbers are private — share the sheet only with staff you trust.</p></div>
+  </div>`;
+};
+function smsSettingsHtml(s) {
+  const p = s.smsProvider || 'None (phone SMS app only)';
+  const show = re => re.test(p) ? '' : 'hide';
+  return `<form id="fSms" class="grid g2">
+    ${fld('SMS gateway', sel('smsProvider', S.db.lists.smsProviders || ['None (phone SMS app only)', 'Fast2SMS', 'Android SMS Gateway (sms-gate.app)', 'Custom HTTP API'], p, null, 'id="smsProv"'), 'spanAll')}
+    <div class="spanAll small muted" data-for="none" ${/^None/.test(p) ? '' : 'hidden'}>“Phone SMS app” opens the message in your phone's SMS app (on a mobile phone). Pick a gateway to send SMS directly from the dashboard and the extension, and to send bulk reminders.</div>
+    <div class="spanAll small muted ${show(/^Fast2SMS/)}" data-for="fast">Fast2SMS “Quick SMS” route: works without DLT registration, Telugu supported, paid per SMS. Copy the API key from fast2sms.com › Dev API.</div>
+    <div class="spanAll small muted ${show(/^Android/)}" data-for="android">Free: install “SMS Gateway for Android” (sms-gate.app) on a shop phone with a SIM, turn on Cloud server, and copy its username and password here. SMS go out from that SIM.</div>
+    <div class="spanAll small muted ${show(/^Custom/)}" data-for="custom">Any Indian SMS provider with an HTTP API (MSG91, Textlocal, BulkSMS…). Use {mobile} (10 digits), {mobile91}, {message}, {apiKey}. Most providers need DLT-approved templates for this route.</div>
+    <label class="f ${show(/^Android/)}" data-for="android"><span>Gateway username</span>${inp('smsUser', s.smsUser)}</label>
+    <label class="f ${show(/^(Fast2SMS|Android|Custom)/)}" data-for="fast android custom"><span>API key / password</span>${inp('smsApiKey', s.smsApiKey, 'type="password" autocomplete="off"')}</label>
+    <label class="f spanAll ${show(/^Android/)}" data-for="android"><span>Gateway API address</span>${inp('smsGatewayUrl', s.smsGatewayUrl || 'https://api.sms-gate.app/3rdparty/v1')}</label>
+    <label class="f spanAll ${show(/^Custom/)}" data-for="custom"><span>API URL</span>${inp('smsCustomUrl', s.smsCustomUrl, 'placeholder="https://provider.in/api?key={apiKey}&to={mobile}&text={message}"')}</label>
+    <label class="f ${show(/^Custom/)}" data-for="custom"><span>Method</span>${sel('smsCustomMethod', ['GET', 'POST'], s.smsCustomMethod || 'GET')}</label>
+    <label class="f ${show(/^Custom/)}" data-for="custom"><span>POST content type</span>${inp('smsCustomContentType', s.smsCustomContentType || 'application/json')}</label>
+    <label class="f spanAll ${show(/^Custom/)}" data-for="custom"><span>POST body (optional)</span>${inp('smsCustomBody', s.smsCustomBody, 'placeholder=\'{"to":"{mobile91}","text":"{message}"}\'')}</label>
+  </form>
+  <div class="row wrap" style="margin-top:12px"><button class="btn primary" data-act="saveSms">💾 Save SMS settings</button>
+    <input class="i" id="smsTestNo" placeholder="Test mobile no." style="width:150px" inputmode="numeric"><button class="btn" data-act="testSms">📤 Send test SMS</button></div>`;
+}
+const hourLabel = h => { h = Number(h); return (h % 12 || 12) + ':00 ' + (h < 12 ? 'AM' : 'PM'); };
+function reminderSettingsHtml(s) {
+  const mode = s.autoReminder || 'Off';
+  const hours = Array.from({ length: 24 }, (_, h) => [String(h), hourLabel(h)]);
+  return `<p class="muted small" style="margin-top:0">Every day at the chosen time, the <b>Reminder</b> SMS (Message Templates › 📱 SMS) goes to each <b>Booked</b> customer whose darshan / seva / check-in date is coming up. Each booking gets it once. It needs an SMS gateway (above) and uses the default language.</p>
+  <form id="fRem" class="grid g3">
+    ${fld('Send automatically to', sel('autoReminder', S.db.lists.reminderModes || ['Off', 'SMS customers only', 'All customers'], mode))}
+    ${fld('Time (India)', sel('reminderHour', hours, String(s.reminderHour || '18')))}
+    ${fld('How early', sel('reminderDaysBefore', [['1', '1 day before'], ['2', '2 days before'], ['3', '3 days before']], String(s.reminderDaysBefore || '1')))}
+  </form>
+  <p class="muted small">“SMS customers only” = bookings set to SMS or WhatsApp + SMS. WhatsApp-only customers still show under Dashboard › Needs attention.</p>
+  <div class="row wrap" style="margin-top:8px"><button class="btn primary" data-act="saveRem">💾 Save</button>
+    <button class="btn" data-act="previewRem">👀 Who gets it next</button></div>`;
+}
+function reminderModal(r) {
+  const rows = r.due.map(x => `<tr><td><b>${esc(x.bookingId)}</b></td><td>${esc(x.name)}</td><td>${esc(x.service)}</td><td>${esc(x.date)} ${esc(x.slot)}</td></tr>`).join('');
+  const m = modal({ title: '⏰ Reminder SMS due', size: 'sm', noFocus: true,
+    body: r.due.length ? `<p class="muted small" style="margin-top:0">${r.due.length} booking(s) are due a reminder now${r.more ? ' (+' + r.more + ' more in the next run)' : ''}. The automatic run sends these at the set time, or you can send them now.</p>
+      <div class="tableWrap"><table class="t"><thead><tr><th>Booking</th><th>Customer</th><th>Service</th><th>Date</th></tr></thead><tbody>${rows}</tbody></table></div>`
+      : '<div class="alert ok">Nobody is due a reminder right now.</div>',
+    foot: '<button class="btn" data-x2>Close</button>' + (r.due.length ? '<button class="btn primary" data-ok>📤 Send now</button>' : '') });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  const ok = m.el.querySelector('[data-ok]');
+  if (ok) ok.onclick = async () => {
+    if (!smsReady()) return toast('Choose an SMS gateway in Settings › SMS first', 'err');
+    ok.disabled = true; ok.textContent = 'Sending…';
+    try {
+      const res = await call('runReminders', {});
+      m.close();
+      S.db = await call('bootstrap'); render();
+      if (res.failed.length) toast(`${res.sent.length} sent, ${res.failed.length} failed: ${res.failed[0].bookingId} – ${res.failed[0].error}`, 'err'); else toast(res.sent.length + ' reminder SMS sent', 'ok');
+    } catch (e) { ok.disabled = false; ok.textContent = '📤 Send now'; fail(e); }
+  };
+}
+function editUser(name) {
+  const u = name ? S.db.users.find(x => x.name === name) : { role: 'Staff', active: 'Yes' };
+  const m = modal({ title: name ? 'Edit user' : 'Add staff user', size: 'sm', body: `<form id="fUser" class="grid">
+    ${fld('Name', inp('name', u.name, (name ? 'readonly ' : '') + 'required'))}${fld('Role', sel('role', S.db.lists.roles, u.role))}${fld('Active', sel('active', S.db.lists.yesNo, u.active))}
+    ${fld(name ? 'New PIN (leave empty to keep)' : 'PIN (4-8 digits)', '<input class="i" name="pin" type="password" inputmode="numeric">')}</form>`,
+    foot: `${name && name !== S.user.name ? '<button class="btn red" data-del style="margin-right:auto">🗑</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>` });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  const del = m.el.querySelector('[data-del]');
+  if (del) del.onclick = async () => { try { S.db.users = await call('deleteUser', { name }); m.close(); render(); } catch (e) { fail(e); } };
+  m.el.querySelector('[data-ok]').onclick = async () => { const f = $('#fUser', m.el); if (!f.reportValidity()) return; try { S.db.users = await call('saveUser', formData(f)); m.close(); render(); toast('User saved', 'ok'); } catch (e) { fail(e); } };
+}
+
+// ================================================================ bulk SMS
+function bulkSmsModal() {
+  if (!smsReady()) return toast('Choose an SMS gateway in Settings › SMS first', 'err');
+  const all = filteredBookings().filter(b => digits(b.mobile).length >= 10 && b.status !== 'Cancelled');
+  const hasSmsPref = all.some(b => b.contactVia === 'SMS' || b.contactVia === 'WhatsApp + SMS');
+  const m = modal({ title: '📱 Bulk SMS', size: 'sm', body: `<form id="fBulk" class="grid">
+    <div class="muted small">Sends one SMS to each booking in the current list (filters and search apply). Up to 100 at a time.</div>
+    ${fld('Message', sel('key', [['', 'Automatic — matches each booking\'s status']].concat(S.db.messages.map(x => [x.key, x.name])), S.bf.status === 'remind' ? 'reminder' : ''))}
+    ${fld('Language', sel('lang', ['Telugu', 'English'], S.lang))}
+    <label class="row small"><input type="checkbox" name="onlySms" ${hasSmsPref ? 'checked' : ''}> Only customers set to “SMS” or “WhatsApp + SMS”</label>
+    <label class="row small"><input type="checkbox" name="onlyUnsent" checked> Skip bookings already messaged for their current status</label>
+    <div id="bulkCount" class="alert info"></div></form>`, foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>📤 Send</button>' });
+  const f = $('#fBulk', m.el);
+  const pick = () => { const d = formData(f); return all.filter(b => (!d.onlySms || b.contactVia === 'SMS' || b.contactVia === 'WhatsApp + SMS') && (!d.onlyUnsent || b.messageStatus !== 'Sent')).slice(0, 100); };
+  const upd = () => { const list = pick(); $('#bulkCount', m.el).innerHTML = `<b>${list.length}</b> SMS will be sent${list.length ? ': ' + esc(list.slice(0, 4).map(b => b.customerName).join(', ')) + (list.length > 4 ? '…' : '') : ''}`; };
+  f.addEventListener('change', upd); upd();
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    const list = pick(); const d = formData(f);
+    if (!list.length) return toast('Nothing to send with these options', 'err');
+    const btn = m.el.querySelector('[data-ok]'); btn.disabled = true; btn.textContent = 'Sending ' + list.length + '…';
+    try {
+      const r = await call('bulkSms', { bookingIds: list.map(b => b.bookingId), key: d.key, lang: d.lang });
+      r.sent.forEach(x => upsertLocal('bookings', 'bookingId', x));
+      pushActivity('Bulk SMS', 'Bulk SMS', r.sent.length + ' sent, ' + r.failed.length + ' failed');
+      m.close(); render();
+      if (r.failed.length) toast(`${r.sent.length} sent, ${r.failed.length} failed: ${r.failed[0].bookingId} – ${r.failed[0].error}`, 'err'); else toast(r.sent.length + ' SMS sent', 'ok');
+    } catch (e) { btn.disabled = false; btn.textContent = '📤 Send'; fail(e); }
+  };
+}
+
+// ================================================================ quick sale (counter work: bills, recharge, xerox…)
+function quickSaleModal() {
+  const svcs = S.db.services.filter(s => s.active !== 'No' && DI(s).kind !== 'ttd')
+    .sort((a, b) => (DI(a).kind === 'quick' ? 0 : 1) - (DI(b).kind === 'quick' ? 0 : 1));
+  const m = modal({ title: '⚡ Quick sale', size: 'sm', body: `<form id="fQs" class="grid g2" autocomplete="off">
+    ${fld('Service', `<select class="i" name="service" required>${opt(svcs.map(s => [s.name, DI(s).icon + ' ' + s.name]), '', '— choose —')}</select>`, 'req spanAll')}
+    ${fld('Quantity', inp('qty', 1, 'type="number" min="1"'))}${fld('Payment mode', sel('paymentMode', S.db.lists.paymentModes, 'Cash'))}
+    ${fld('Fee / bill amount (₹)', inp('amount', '', 'type="number" min="0"'))}${fld('Service charge (₹)', inp('serviceCharge', '', 'type="number" min="0"'))}
+    ${fld('Customer name (optional)', inp('customerName', ''))}${fld('Mobile (optional)', inp('mobile', '', 'inputmode="numeric"'))}
+    <div class="spanAll row between"><label class="row small"><input type="checkbox" name="printRc"> Print receipt after saving</label><span style="font-size:15px">Total: <b id="qsTotal">₹0</b></span></div>
+  </form>`, foot: '<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>💾 Save sale</button>' });
+  const f = $('#fQs', m.el);
+  const auto = () => { const s = serviceByName(f.service.value); const q = Math.max(1, num(f.qty.value)); if (s) { f.amount.value = num(s.price) * q || ''; f.serviceCharge.value = num(s.serviceCharge) * q; } tot(); };
+  const tot = () => { $('#qsTotal', m.el).textContent = inr(num(f.amount.value) + num(f.serviceCharge.value)); };
+  f.service.addEventListener('change', auto); f.qty.addEventListener('input', auto);
+  f.amount.addEventListener('input', tot); f.serviceCharge.addEventListener('input', tot);
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  m.el.querySelector('[data-ok]').onclick = async () => {
+    if (!f.reportValidity()) return;
+    const d = formData(f);
+    try {
+      const saved = await call('quickSale', d);
+      upsertLocal('bookings', 'bookingId', saved); pushActivity(saved.bookingId, 'Quick sale', saved.service + ' · ' + inr(saved.total));
+      m.close(); render(); toast('Sale saved: ' + saved.bookingId + ' · ' + inr(saved.total), 'ok');
+      if (d.printRc) receiptModal(saved.bookingId);
+    } catch (e) { fail(e); }
+  };
+}
+
+// ================================================================ receipt (print / Save as PDF in the browser: Telugu renders correctly)
+function inWords(n) {
+  n = Math.round(Math.abs(num(n)));
+  if (!n) return 'Zero';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const t = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = x => x < 20 ? a[x] : t[Math.floor(x / 10)] + (x % 10 ? ' ' + a[x % 10] : '');
+  const three = x => (x >= 100 ? a[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' : '') : '') + (x % 100 ? two(x % 100) : '');
+  const parts = [[10000000, 'Crore'], [100000, 'Lakh'], [1000, 'Thousand']];
+  let out = [];
+  parts.forEach(([v, w]) => { if (n >= v) { out.push((v === 10000000 ? inWords(Math.floor(n / v)) : two(Math.floor(n / v))) + ' ' + w); n %= v; } });
+  if (n) out.push(three(n));
+  return out.join(' ');
+}
+function receiptHtml(b) {
+  const s = S.db.settings;
+  const kind = DI(b).kind, ttd = kind === 'ttd';
+  const total = num(b.total), recv = num(b.received), bal = total - recv;
+  const row = (te, en, v, cls) => v === '' || v == null ? '' : `<tr class="${cls || ''}"><td><span class="te">${te}</span> ${en}</td><td>${v}</td></tr>`;
+  const refund = b.refundStatus === 'Refunded' ? row('తిరిగి ఇచ్చినది', 'Refunded', inr(b.refundAmount) + (b.refundDate ? ' · ' + fD(b.refundDate) : '') + (b.refundMode ? ' · ' + esc(b.refundMode) : ''))
+    : b.refundStatus === 'Refund Pending' ? row('తిరిగి ఇవ్వాల్సినది', 'Refund due', inr(b.refundAmount || recv))
+    : b.refundStatus === 'Adjusted to Next Booking' ? row('తదుపరి బుకింగ్‌కు', 'Kept for next booking', inr(recv)) : '';
+  const dateLine = b.category === 'Accommodation' ? (b.checkIn ? fD(b.checkIn) + (b.checkOut ? ' → ' + fD(b.checkOut) : '') : '') : (b.serviceDate ? fD(b.serviceDate) + (b.slot ? ' · ' + esc(b.slot) : '') : '');
+  return `<div class="rcpt">
+    <div class="rHead">
+      <div class="rShop">${esc(s.shopName || '')}</div>
+      <div class="te">${esc(s.shopNameTe || '')}</div>
+      <div class="rSub">${esc(s.groupName || '')}${s.groupNameTe ? ' · <span class="te">' + esc(s.groupNameTe) + '</span>' : ''}</div>
+      ${s.shopAddress || s.shopPhone ? `<div class="rSub">${esc(s.shopAddress || '')}${s.shopAddress && s.shopPhone ? ' · ' : ''}${s.shopPhone ? '📞 ' + esc(s.shopPhone) : ''}</div>` : ''}
+    </div>
+    <div class="rTitle"><span class="te">రసీదు</span> · RECEIPT</div>
+    <table class="rMeta"><tr><td><span class="te">రసీదు నం.</span> Receipt No<br><b>${esc(b.bookingId)}</b></td><td class="r"><span class="te">తేదీ</span> Date<br><b>${fD(b.requestDate) || fD(new Date().toISOString())}</b></td></tr></table>
+    <table class="rTab">
+      ${row('పేరు', 'Name', '<b>' + esc(b.customerName) + '</b>')}
+      ${row('మొబైల్', 'Mobile', esc(b.mobile || ''))}
+      ${row('సేవ', 'Service', esc(b.service))}
+      ${row(ttd ? 'భక్తులు' : kind === 'travel' ? 'ప్రయాణికులు' : 'వ్యక్తులు', ttd ? 'Devotees' : kind === 'travel' ? 'Passengers' : 'Persons', esc(b.devotees || '') + (num(b.persons) ? ` (${num(b.persons)})` : ''))}
+      ${row('కోరిన తేదీ', 'Preferred date', b.status === 'Booked' || b.status === 'Completed' ? '' : fD(b.preferredDate))}
+      ${row(ttd ? 'దర్శనం / సేవ తేదీ' : kind === 'travel' ? 'ప్రయాణ తేదీ' : 'తేదీ', ttd ? 'Date & slot' : kind === 'travel' ? 'Journey date & time' : 'Date', dateLine)}
+      ${row(ttd ? 'TTD టికెట్ నం.' : kind === 'travel' ? 'PNR / టికెట్ నం.' : 'అప్లికేషన్ నం.', ttd ? 'TTD ticket no' : kind === 'travel' ? 'PNR / ticket no' : 'Application / ref no', esc(b.ttdRef || ''))}
+      ${kind === 'travel' ? row('ప్రయాణం', 'Journey', route(b)) + row('రైలు / బస్సు / ఫ్లైట్', 'Train / bus / flight', esc([b.operator, b.vehicleNo].filter(Boolean).join(' '))) + row('తరగతి', 'Class / quota', esc([b.travelClass, b.quota].filter(Boolean).join(' · '))) + row('బోర్డింగ్', 'Boarding', esc(b.boardingPoint || '')) + row('సీటు', 'Coach / seat', esc(b.seatInfo || '')) + row('టికెట్ స్థితి', 'Ticket status', esc(b.ticketStatus || '')) : ''}
+      ${kind === 'app' ? row('అంచనా తేదీ', 'Expected date', fD(b.expectedDate)) + row('ఇచ్చిన పత్రాలు', 'Documents received', esc(b.documents || '')) : ''}
+      ${row('స్థితి', 'Status', esc(b.status))}
+    </table>
+    <table class="rTab money">
+      ${row(ttd ? 'టికెట్ మొత్తం (TTD)' : kind === 'travel' ? 'టికెట్ ఛార్జీ' : 'ప్రభుత్వ / పోర్టల్ రుసుము', ttd ? 'Ticket amount' : kind === 'travel' ? 'Ticket fare' : 'Govt / portal fee', inr(b.ticketAmount))}
+      ${row('సేవా రుసుము', 'Service charge', inr(b.serviceCharge))}
+      ${row('మొత్తం', 'Total', inr(total), 'tot')}
+      ${row('చెల్లించినది', 'Received', inr(recv) + (b.paymentMode ? ' · ' + esc(b.paymentMode) : ''), 'paid')}
+      ${bal > 0 ? row('బాకీ', 'Balance due', inr(bal), 'due') : ''}
+      ${refund}
+    </table>
+    <div class="rWords">Received: Rupees ${inWords(recv)} Only</div>
+    ${b.department === 'Train' && s.irctcAgentId ? `<div class="rWords">IRCTC authorised agent ID: ${esc(s.irctcAgentId)}</div>` : ''}
+    <div class="rNote"><div class="te">${esc((ttd ? s.receiptNoteTe : s.receiptNoteOtherTe) || '')}</div><div>${esc((ttd ? s.receiptNote : s.receiptNoteOther) || '')}</div></div>
+    <div class="rSign"><div>${esc(b.handledBy || S.db.user.name)}</div><div class="r">${esc(s.shopName || '')}<br><small>Authorised signature</small></div></div>
+    <div class="rFoot">${ttd ? '🙏 <span class="te">ఓం నమో వేంకటేశాయ</span> · Govinda Govinda 🙏' : '🙏 <span class="te">ధన్యవాదాలు</span> · Thank you 🙏'}</div>
+  </div>`;
+}
+const RCPT_SIZES = { A4: '@page{size:A4;margin:14mm}', A5: '@page{size:A5;margin:8mm}', '80mm': '@page{size:80mm auto;margin:3mm}' };
+function receiptModal(id) {
+  const b = S.db.bookings.find(x => x.bookingId === id);
+  if (!b) return toast('Booking not found', 'err');
+  let size = RCPT_SIZES[S.db.settings.receiptSize] ? S.db.settings.receiptSize : 'A5';
+  const m = modal({ title: '🧾 Receipt · ' + esc(id), noFocus: true,
+    body: `<div class="row wrap" style="margin-bottom:12px"><span class="small muted">Paper</span><div class="seg" id="rSize">${Object.keys(RCPT_SIZES).map(k => `<button data-s="${k}" class="${k === size ? 'on' : ''}">${k === '80mm' ? '80mm thermal' : k}</button>`).join('')}</div></div>
+      <div class="rcptWrap" id="rcptBox" data-size="${size}">${receiptHtml(b)}</div>
+      <p class="small muted" style="margin-bottom:0">In the print window choose your printer, or <b>Save as PDF</b> to send the receipt on WhatsApp. On a phone: Share › Print › Save as PDF.</p>`,
+    foot: '<button class="btn" data-x2>Close</button><button class="btn primary" data-ok>🖨 Print / Save as PDF</button>' });
+  m.el.querySelector('[data-x2]').onclick = m.close;
+  $('#rSize', m.el).addEventListener('click', e => { const t = e.target.closest('[data-s]'); if (!t) return; size = t.dataset.s; $$('#rSize button', m.el).forEach(x => x.classList.toggle('on', x === t)); $('#rcptBox', m.el).dataset.size = size; });
+  m.el.querySelector('[data-ok]').onclick = () => {
+    const area = document.createElement('div'); area.id = 'printArea'; area.dataset.size = size; area.innerHTML = receiptHtml(b);
+    const pg = document.createElement('style'); pg.id = 'printPage'; pg.textContent = RCPT_SIZES[size];
+    document.body.appendChild(area); document.head.appendChild(pg); document.body.classList.add('printing');
+    const done = () => { area.remove(); pg.remove(); document.body.classList.remove('printing'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => { window.print(); setTimeout(done, 500); }, 50);
+    call('receiptPrinted', { bookingId: id, size }).then(() => pushActivity(id, 'Receipt printed', size)).catch(() => {});
+  };
+}
+
+// ================================================================ global search
+function globalSearch(q) {
+  const box = $('#gres');
+  q = q.trim().toLowerCase();
+  if (q.length < 2) { box.classList.add('hide'); return; }
+  const qd = q.replace(/\s/g, '');
+  const bk = S.db.bookings.filter(b => [b.bookingId, b.customerName, b.mobile, b.ttdRef, b.devotees].some(v => String(v || '').toLowerCase().includes(q))).slice(0, 8);
+  const cu = S.db.customers.filter(c => [c.name, c.mobile, c.profile].some(v => String(v || '').toLowerCase().includes(q)) || String(c.idNumber || '').replace(/\s/g, '').toLowerCase().includes(qd)).slice(0, 6);
+  box.innerHTML = (bk.length ? '<div class="it muted small" style="cursor:default">Bookings</div>' : '') + bk.map(b => `<div class="it" data-act="openBooking" data-id="${esc(b.bookingId)}"><b>${esc(b.customerName)}</b> ${badge(b.status)}<div class="muted small">${esc(b.bookingId)} · ${esc(b.service)} · ${fD(b.serviceDate || b.preferredDate)}</div></div>`).join('')
+    + (cu.length ? '<div class="it muted small" style="cursor:default">Devotees</div>' : '') + cu.map(c => `<div class="it" data-act="openCustomer" data-id="${esc(c.customerId)}"><b>${esc(c.name)}</b><div class="muted small">${esc(c.profile)} · ${esc(c.mobile)}</div></div>`).join('')
+    || '<div class="it muted">No results</div>';
+  box.classList.remove('hide');
+}
+
+// ================================================================ click actions
+const ACT = {
+  go: el => go(el.dataset.page),
+  menu: () => $('#side').classList.toggle('open'),
+  logout: () => logout(),
+  theme: () => { const cur = store.get('theme'); const nxt = !cur ? (isDark() ? 'light' : 'dark') : cur === 'dark' ? 'light' : null; store.set('theme', nxt); applyTheme(); render(); },
+  refresh: async () => { try { S.db = await call('bootstrap'); renderNav(); render(); toast('Refreshed from Google Sheet', 'ok'); } catch (e) { fail(e); } },
+  period: el => { S.period = el.dataset.p; render(); },
+  kpiGo: el => { const g = el.dataset.go; S.bf = { q: '', status: '', cat: '', month: '', login: '', when: 'request' }; if (g === 'Booked') S.bf.status = 'booked'; else if (g === 'Not Booked') S.bf.status = 'failed'; else if (g !== 'all') S.bf.status = g; go('bookings'); },
+  bstatus: el => { S.bf.status = el.dataset.s; render(); },
+  newBooking: () => bookingForm(null),
+  quickSale: () => quickSaleModal(),
+  markDone: el => saveBooking({ bookingId: el.dataset.id, status: 'Completed' }, 'Marked completed ✅').then(() => openBooking(el.dataset.id, { scrollMsg: true })).catch(fail),
+  newBookingFor: el => bookingForm(null, { profile: el.dataset.p }),
+  editBooking: el => { closeDrawer(); bookingForm(el.dataset.id); },
+  openBooking: el => { $('#gres') && $('#gres').classList.add('hide'); openBooking(el.dataset.id); },
+  closeDrawer: () => closeDrawer(),
+  markBooked: el => markBooked(el.dataset.id),
+  markNotBooked: el => markNotBooked(el.dataset.id),
+  markRejected: el => markNotBooked(el.dataset.id, 'Rejected'),
+  setStatus: el => saveBooking({ bookingId: el.dataset.id, status: el.dataset.s }, 'Status: ' + el.dataset.s).then(() => openBooking(el.dataset.id, { scrollMsg: true })).catch(fail),
+  markApplied: el => markApplied(el.dataset.id),
+  markDip: el => markDip(el.dataset.id),
+  markAttempt: el => markAttempt(el.dataset.id),
+  markFailed: el => { const b = S.db.bookings.find(x => x.bookingId === el.dataset.id); saveBooking({ bookingId: b.bookingId, status: 'Payment Failed', ttdPayment: 'Debited - No Ticket' }, 'Marked: paid but no ticket').then(() => openBooking(b.bookingId, { scrollMsg: true })).catch(fail); },
+  refund: el => refundModal(el.dataset.id),
+  moreStatus: el => moreStatus(el.dataset.id),
+  msgLang: el => { S.lang = el.dataset.l; openBooking(el.dataset.id, { key: el.dataset.k, chan: el.dataset.c, scrollMsg: true }); },
+  msgChan: el => openBooking(el.dataset.id, { key: el.dataset.k, chan: el.dataset.c, scrollMsg: true }),
+  sendSms: async el => {
+    const id = el.dataset.id;
+    const b = S.db.bookings.find(x => x.bookingId === id);
+    if (digits(b.mobile).length < 10) return toast('No valid mobile number on this booking', 'err');
+    el.disabled = true; el.textContent = 'Sending…';
+    try {
+      const r = await call('sendSms', { bookingId: id, text: $('#msgText').value });
+      upsertLocal('bookings', 'bookingId', r.booking);
+      pushActivity(id, 'Message sent (SMS, ' + r.parts + ' SMS)');
+      renderNav(); render();
+      openBooking(id, { chan: 'sms', scrollMsg: true });
+      toast('SMS sent to ' + b.mobile + ' (' + r.parts + ' SMS)', 'ok');
+    } catch (e) { el.disabled = false; el.textContent = '📤 Send SMS'; fail(e); }
+  },
+  smsApp: async el => {
+    const href = el.getAttribute('href');
+    try { window.top.location.href = href; } catch (e) { window.open(href, '_blank'); }
+    const ok = await confirmBox('Did the SMS go out from your phone? Mark it as sent?', 'Yes, mark sent');
+    if (!ok) return;
+    try { const saved = await call('markMessage', { bookingId: el.dataset.id, channel: 'SMS' }); upsertLocal('bookings', 'bookingId', saved); render(); openBooking(el.dataset.id, { chan: 'sms', scrollMsg: true }); } catch (e) { fail(e); }
+  },
+  tplChan: el => { S.tplChan = el.dataset.c; render(); },
+  saveSms: async () => { try { S.db.settings = await call('saveSettings', formData($('#fSms'))); toast('SMS settings saved', 'ok'); render(); } catch (e) { fail(e); } },
+  testSms: async () => { const n = $('#smsTestNo').value; if (digits(n).length < 10) return toast('Type a 10-digit mobile number to test', 'err'); try { await call('saveSettings', formData($('#fSms'))); const r = await call('testSms', { mobile: n }); toast('Test SMS sent (' + r.parts + ' SMS). Gateway: ' + String(r.response).slice(0, 80), 'ok'); } catch (e) { fail(e); } },
+  bulkSms: () => bulkSmsModal(),
+  deptGo: el => { S.bf = { q: '', status: '', cat: '', month: '', login: '', when: 'request', dept: el.dataset.d }; go('bookings'); },
+  receipt: el => receiptModal(el.dataset.id),
+  saveRem: async () => { try { S.db.settings = await call('saveSettings', formData($('#fRem'))); const s = S.db.settings; toast(s.autoReminder === 'Off' ? 'Automatic reminders are off' : 'Reminders will go daily at ' + hourLabel(s.reminderHour), 'ok'); render(); } catch (e) { fail(e); } },
+  previewRem: async () => { try { await call('saveSettings', formData($('#fRem'))); reminderModal(await call('runReminders', { dryRun: true })); } catch (e) { fail(e); } },
+  copyMsg: el => { const t = $('#msgText').value; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Message copied', 'ok'), () => { $('#msgText').select(); document.execCommand('copy'); toast('Message copied', 'ok'); }); },
+  sendWa: async el => {
+    const b = S.db.bookings.find(x => x.bookingId === el.dataset.id);
+    if (!digits(b.mobile)) return toast('No mobile number on this booking', 'err');
+    window.open(waUrl(b.mobile, $('#msgText').value), '_blank');
+    try { const saved = await call('markMessage', { bookingId: b.bookingId, channel: 'WhatsApp' }); upsertLocal('bookings', 'bookingId', saved); pushActivity(b.bookingId, 'Message sent (WhatsApp)'); renderNav(); render(); openBooking(b.bookingId, { scrollMsg: true }); } catch (e) { fail(e); }
+  },
+  markSent: async el => { try { const saved = await call('markMessage', { bookingId: el.dataset.id, channel: el.dataset.c || 'WhatsApp' }); upsertLocal('bookings', 'bookingId', saved); render(); openBooking(el.dataset.id, { chan: el.dataset.c === 'SMS' ? 'sms' : 'wa', scrollMsg: true }); toast('Marked as sent', 'ok'); } catch (e) { fail(e); } },
+  exportBookings: () => exportList(filteredBookings(), 'TTD-Bookings-' + todayIso() + '.xlsx'),
+  exportReport: () => { const r = periodRange(S.rep); exportList(S.db.bookings.filter(b => inRange(b.requestDate, r)), 'TTD-Report-' + S.rep + '-' + todayIso() + '.xlsx'); },
+  exportRefunds: () => exportList(S.db.bookings.filter(b => b.refundStatus && b.refundStatus !== 'Not Applicable'), 'TTD-Refunds-' + todayIso() + '.xlsx'),
+  rep: el => { S.rep = el.dataset.p; render(); },
+  boardCat: el => { S.boardCat = el.dataset.cat; go('board'); },
+  pickProf: el => { S.prof = el.dataset.p; render(); },
+  addMember: el => customerForm(null, { profile: el.dataset.p }),
+  editCustomer: (el, e) => { e.stopPropagation(); customerForm(el.dataset.id); },
+  openCustomer: el => { const c = S.db.customers.find(x => x.customerId === el.dataset.id); if (S.page === 'customers' && c && (c.profile || c.name) === S.prof && !$('#drawerOv')) customerForm(el.dataset.id); else openCustomer(el.dataset.id); },
+  toggleIds: (el, e) => { e.stopPropagation(); S.showIds = el.checked; render(); },
+  importCustomers: () => importCustomers(),
+  exportExt: () => exportExt(),
+  downloadTemplate: () => downloadXlsx([TPL_HEAD, ['Example Family', 'Example Name', '14/05/1990', 'Male', 'Aadhaar Card', '1234 5678 9012', '', '9999999999', 'name@gmail.com', '1-2-3, Main Road', 'Srikakulam', 'Srikakulam', 'Andhra Pradesh', '532001', 'India']], 'Devotees', 'TTD-Devotees-Template.xlsx', [16, 26, 14, 10, 14, 18, 14, 12, 24, 26, 14, 14, 16, 9, 9]),
+  editService: el => editService(el.dataset.id),
+  editRelease: el => editRelease(el.dataset.id),
+  relMonth: el => { const [y, m] = S.relMonth.split('-').map(Number); S.relMonth = ym(new Date(y, m - 1 + Number(el.dataset.d), 1)); render(); },
+  addPattern: async () => { try { S.db.releases = await call('addReleases', { month: S.relMonth }); render(); toast('Usual release dates added — check them against the TTD announcement', 'ok'); } catch (e) { fail(e); } },
+  editLogin: (el, e) => { if (e.target.closest('[data-act="loginBookings"]')) return; editLogin(el.dataset.id); },
+  loginBookings: (el, e) => { e.preventDefault(); e.stopPropagation(); S.bf = { q: '', status: '', cat: '', month: '', login: el.dataset.id, when: 'request' }; go('bookings'); },
+  msgKey: el => { S.msgKey = el.dataset.k; render(); },
+  tplLang: el => { S.lang = el.dataset.l; render(); },
+  insPh: el => { const ta = $('#tplText'); const p = '{' + el.dataset.p + '}'; const s = ta.selectionStart; ta.value = ta.value.slice(0, s) + p + ta.value.slice(ta.selectionEnd); ta.focus(); ta.selectionStart = ta.selectionEnd = s + p.length; ta.dispatchEvent(new Event('input')); },
+  saveTpl: async () => { const t = S.db.messages.find(m => m.key === S.msgKey); const patch = { key: t.key }; patch[tplField()] = $('#tplText').value; try { await call('saveMessage', patch); Object.assign(t, patch); toast('Template saved', 'ok'); } catch (e) { fail(e); } },
+  saveSettings: async () => { try { S.db.settings = await call('saveSettings', formData($('#fSet'))); toast('Settings saved', 'ok'); render(); } catch (e) { fail(e); } },
+  newKey: async () => { if (S.db.settings.apiKey && !await confirmBox('Make a new API key? The extension will need the new key.', 'Make new key')) return; try { S.db.settings.apiKey = await call('newApiKey', {}); render(); toast('API key ready — paste it in the extension', 'ok'); } catch (e) { fail(e); } },
+  editUser: el => editUser(el.dataset.n),
+  changePin: async () => { try { await call('changePin', formData($('#fPin'))); S.db.defaultPin = false; toast('PIN changed', 'ok'); render(); } catch (e) { fail(e); } },
+  reloadActivity: async () => { try { S.db.activity = await call('activity', { limit: 500 }); render(); } catch (e) { fail(e); } }
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const fn = ACT[el.dataset.act];
+  if (!fn) return;
+  if (el.tagName === 'A') e.preventDefault();
+  fn(el, e);
+});
+
+// Live countdowns
+setInterval(() => {
+  const now = Date.now();
+  $$('.cd[data-t]').forEach(el => {
+    let s = Math.floor((Number(el.dataset.t) - now) / 1000);
+    if (s <= 0) { el.textContent = s > -3600 ? '🔴 OPEN NOW' : 'Done'; return; }
+    const d = Math.floor(s / 86400); s %= 86400;
+    const h = Math.floor(s / 3600); s %= 3600;
+    const m = Math.floor(s / 60); s %= 60;
+    el.textContent = (d ? d + 'd ' : '') + pad(h) + ':' + pad(m) + ':' + pad(s);
+  });
+}, 1000);
+
+// ================================================================ start
+if (S.token) boot(); else renderLogin();
+})();
+</script>

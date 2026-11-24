@@ -7,8 +7,8 @@
  *   - serves the dashboard web app (doGet)
  *   - answers the dashboard (api) and the Chrome extension (doPost, with an API key)
  */
-var APP = { name: 'AGS Services Master', version: '3.0.0', tz: 'Asia/Kolkata' };
-var SCHEMA_VERSION = '7';   // bump when columns change: sheets are repaired automatically on next use
+var APP = { name: 'AGS Services Master', version: '4.0.0', tz: 'Asia/Kolkata' };
+var SCHEMA_VERSION = '8';   // bump when columns change: sheets are repaired automatically on next use
 
 // ------------------------------------------------------------------ dropdown lists
 /** Departments: [name, icon, kind, booking-ID prefix]. kind decides the form: ttd | travel | app (tracked work) | quick (counter sale). */
@@ -17,7 +17,10 @@ var DEPARTMENTS = [
   ['Aadhaar', '🆔', 'app', 'AGS'], ['PAN', '💳', 'app', 'AGS'], ['Voter ID', '🗳️', 'app', 'AGS'], ['Certificates', '📜', 'app', 'AGS'],
   ['Ration & Pension', '🍚', 'app', 'AGS'], ['Govt Schemes', '🌾', 'app', 'AGS'], ['Passport', '🛂', 'app', 'AGS'], ['Transport (RTO)', '🚗', 'app', 'AGS'],
   ['Tax & Business', '🧾', 'app', 'AGS'], ['Insurance', '🛡️', 'app', 'AGS'], ['Exams & Jobs', '🎓', 'app', 'AGS'],
-  ['Bill Payments', '💡', 'quick', 'QS'], ['Banking', '🏦', 'quick', 'QS'], ['Counter', '🖨️', 'quick', 'QS'], ['Other', '📌', 'app', 'AGS']
+  ['Bill Payments', '💡', 'quick', 'QS'], ['Banking', '🏦', 'quick', 'QS'], ['Counter', '🖨️', 'quick', 'QS'], ['Other', '📌', 'app', 'AGS'],
+  // v4: more online services (AGS covers online / CSC work only – no home or third-party services)
+  ['Temples', '🪔', 'booking', 'BKG'], ['Hotels & Stays', '🏨', 'booking', 'BKG'], ['Land & Property', '🏡', 'app', 'AGS'], ['Farmers', '🌱', 'app', 'AGS'],
+  ['Education', '📚', 'app', 'AGS'], ['PF & Employment', '👷', 'app', 'AGS'], ['Health', '🩺', 'app', 'AGS']
 ];
 function deptInfo_(name) {
   for (var i = 0; i < DEPARTMENTS.length; i++) if (DEPARTMENTS[i][0] === name) return { name: name, icon: DEPARTMENTS[i][1], kind: DEPARTMENTS[i][2], prefix: DEPARTMENTS[i][3] };
@@ -43,7 +46,8 @@ var LISTS = {
   quotas: ['General', 'Tatkal', 'Premium Tatkal', 'Ladies', 'Senior Citizen', 'Lower Berth', 'Divyang'],
   ticketStatuses: ['CNF', 'RAC', 'WL', 'RLWL / PQWL', 'Partly CNF'],
   bookingModes: ['Online Quota', 'Lucky Dip', 'Current Booking', 'Offline', 'Online', 'Counter'],
-  roles: ['Admin', 'Staff'],
+  roles: ['Admin', 'Manager', 'Staff', 'Viewer'],
+  languages: ['Telugu', 'English'],
   yesNo: ['Yes', 'No'],
   loginStatuses: ['Active', 'Blocked', 'Closed'],
   contactVias: ['WhatsApp', 'SMS', 'WhatsApp + SMS'],
@@ -133,7 +137,15 @@ var SCHEMA = {
     c('country', 'Country', 'text', 80),
     c('notes', 'Notes', 'text', 180),
     c('createdOn', 'Added On', 'datetime', 130),
-    c('updatedOn', 'Updated On', 'datetime', 130)
+    c('updatedOn', 'Updated On', 'datetime', 130),
+    c('nameTe', 'Name in Telugu', 'text', 160),
+    c('language', 'Messages In', 'text', 90, 'languages'),
+    c('consentWhatsapp', 'WhatsApp OK', 'text', 90, 'yesNo'),
+    c('consentSms', 'SMS OK', 'text', 70, 'yesNo'),
+    c('consentCalls', 'Calls OK', 'text', 70, 'yesNo'),
+    c('consentDate', 'Consent Date', 'date', 100),
+    c('tags', 'Tags', 'text', 140),
+    c('docsLink', 'Documents Folder (Drive link)', 'text', 200)
   ]},
   Services: { color: '#1E40AF', id: 'serviceId', cols: [
     c('serviceId', 'Service ID', 'text', 90),
@@ -365,6 +377,24 @@ DEFAULT_SMS.app_ready = ['{name} గారు, మీ {service} సిద్ధ�
   '{name} garu, your {service} is ready. Please collect at our centre. Balance Rs.{balance}.' + SMS_EN_SIGN];
 DEFAULT_SMS.app_rejected = ['{name} గారు, మీ {service} దరఖాస్తు తిరస్కరించబడింది. కారణం: {remarks}. మమ్మల్ని సంప్రదించండి.' + SMS_TE_SIGN,
   '{name} garu, your {service} application was rejected. Reason: {remarks}. Please contact us.' + SMS_EN_SIGN];
+DEFAULT_MESSAGES.push(
+  ['booking_received', 'Booking request received (temples, hotels…)',
+    'నమస్కారం {name} గారు 🙏\n\nమీ *{service}* బుకింగ్ అభ్యర్థన మాకు అందింది ✅\n🧾 నంబర్: *{bookingId}*\n📅 కోరిన తేదీ: {preferredDate}\n👥 వ్యక్తులు: {persons}\n💰 చెల్లించినది: ₹{received}\n\nబుకింగ్ పూర్తవగానే వివరాలు పంపిస్తాము.' + SIGN_TE,
+    'Namaskaram {name} garu 🙏\n\nWe have received your *{service}* booking request ✅\n🧾 Number: *{bookingId}*\n📅 Wanted date: {preferredDate}\n👥 Persons: {persons}\n💰 Received: ₹{received}\n\nWe will send the details once it is booked.' + SIGN_EN],
+  ['booking_done', 'Booking confirmed (temples, hotels…)',
+    'నమస్కారం {name} గారు 🙏\n\nమీ *{service}* బుకింగ్ పూర్తయింది ✅\n🎫 బుకింగ్ / టికెట్ నం.: *{ttdRef}*\n📅 తేదీ: *{serviceDate}*  ⏰ {slot}\n📍 {reportingPoint}\n👥 వ్యక్తులు ({persons}): {devotees}\n💰 మొత్తం: ₹{ticketAmount}\n\n📌 ఒరిజినల్ ఫోటో ID, టికెట్ వెంట ఉంచుకోండి.' + SIGN_TE,
+    'Namaskaram {name} garu 🙏\n\nYour *{service}* booking is confirmed ✅\n🎫 Booking / ticket no: *{ttdRef}*\n📅 Date: *{serviceDate}*  ⏰ {slot}\n📍 {reportingPoint}\n👥 Persons ({persons}): {devotees}\n💰 Amount: ₹{ticketAmount}\n\n📌 Carry your original photo ID and the ticket.' + SIGN_EN],
+  ['booking_failed', 'Booking not done (temples, hotels…)',
+    'నమస్కారం {name} గారు,\n\nక్షమించండి 🙏 మీ *{service}* బుకింగ్ ({preferredDate}) దొరకలేదు.\n💰 మొత్తం: ₹{refundAmount}\n📌 రీఫండ్ స్థితి: {refundStatus}\n\nవేరే తేదీ కోసం మమ్మల్ని సంప్రదించండి.' + SIGN_TE,
+    'Namaskaram {name} garu,\n\nSorry 🙏 your *{service}* booking ({preferredDate}) could not be done.\n💰 Amount: ₹{refundAmount}\n📌 Refund status: {refundStatus}\n\nContact us for another date.' + SIGN_EN],
+  ['booking_reminder', 'Booking reminder (temples, hotels…)',
+    'గుర్తు 🙏 {name} గారు, మీ *{service}* *{serviceDate}* న, ⏰ {slot}.\n🎫 {ttdRef} · 📍 {reportingPoint}\n✔ ఫోటో ID ✔ టికెట్' + SIGN_TE,
+    'Reminder 🙏 {name} garu, your *{service}* is on *{serviceDate}*, ⏰ {slot}.\n🎫 {ttdRef} · 📍 {reportingPoint}\n✔ Photo ID ✔ Ticket' + SIGN_EN]
+);
+DEFAULT_SMS.booking_received = ['{name} గారు, మీ {service} బుకింగ్ అభ్యర్థన నమోదైంది. నం. {bookingId}.' + SMS_TE_SIGN, '{name} garu, your {service} booking request is received. No. {bookingId}.' + SMS_EN_SIGN];
+DEFAULT_SMS.booking_done = ['{name} గారు, {service} బుక్ అయింది. టికెట్ {ttdRef}, {serviceDate} {slot}.' + SMS_TE_SIGN, '{name} garu, {service} booked. Ticket {ttdRef}, {serviceDate} {slot}.' + SMS_EN_SIGN];
+DEFAULT_SMS.booking_failed = ['{name} గారు, క్షమించండి. {service} బుకింగ్ దొరకలేదు. ₹{refundAmount}: {refundStatus}.' + SMS_TE_SIGN, '{name} garu, sorry, {service} could not be booked. Rs.{refundAmount}: {refundStatus}.' + SMS_EN_SIGN];
+DEFAULT_SMS.booking_reminder = ['గుర్తు: {name} గారు, {service} {serviceDate} {slot}. టికెట్ {ttdRef}.' + SMS_TE_SIGN, 'Reminder: {name} garu, {service} on {serviceDate} {slot}. Ticket {ttdRef}.' + SMS_EN_SIGN];
 DEFAULT_SMS.order_received = ['{name} గారు, మీ {service} పని నమోదైంది. నం. {bookingId}. మొత్తం ₹{total}, చెల్లించినది ₹{received}. పూర్తవగానే తెలియజేస్తాము.' + SMS_TE_SIGN,
   '{name} garu, your {service} request is received. No. {bookingId}. Total Rs.{total}, received Rs.{received}. We will inform you when done.' + SMS_EN_SIGN];
 DEFAULT_SMS.order_completed = ['{name} గారు, మీ {service} పని పూర్తయింది. నం. {bookingId}. ధన్యవాదాలు.' + SMS_TE_SIGN,
@@ -416,6 +446,63 @@ var DEFAULT_DOCS = {
   'Udyam registration': ['Aadhaar card, PAN, Bank details, Business details', 3], 'FSSAI registration': ['Aadhaar card, Passport photo, Business address proof', 30],
   'Bank account opening': ['Aadhaar card, PAN card, Passport photo', 7]
 };
+// v4 additions: more online / CSC services, one row per service: [department, name, fee, per, serviceCharge]
+DEFAULT_AGS_SERVICES.push(
+  ['Temples', 'Srisailam darshan / seva booking', 0, 'Person', 100], ['Temples', 'Simhachalam darshan / seva booking', 0, 'Person', 100],
+  ['Temples', 'Arasavalli Sun Temple seva booking', 0, 'Person', 50], ['Temples', 'Annavaram vratham / darshan booking', 0, 'Person', 100],
+  ['Temples', 'Vijayawada Kanaka Durga darshan / seva', 0, 'Person', 100], ['Temples', 'Yadadri darshan / seva booking', 0, 'Person', 100],
+  ['Temples', 'Sabarimala virtual queue booking', 0, 'Person', 100], ['Temples', 'Shirdi Sai darshan / aarti booking', 0, 'Person', 100],
+  ['Temples', 'Other temple online booking', 0, 'Person', 100],
+  ['Hotels & Stays', 'Hotel / room booking (online)', 0, 'Room', 150], ['Hotels & Stays', 'Temple choultry / guest house booking', 0, 'Room', 100],
+  ['Train', 'Train ticket (Premium Tatkal)', 0, 'Person', 150], ['Train', 'TDR filing / ticket refund help', 0, 'Booking', 50],
+  ['Bus', 'TGSRTC bus ticket', 0, 'Person', 30], ['Flight', 'Flight cancellation / reschedule', 0, 'Booking', 200],
+  ['Aadhaar', 'Aadhaar update appointment booking', 0, 'Person', 30], ['Aadhaar', 'Aadhaar - mobile / email verification', 0, 'Person', 20],
+  ['PAN', 'Instant e-PAN (Aadhaar based)', 0, 'Person', 50], ['Voter ID', 'Voter deletion / objection (Form 7)', 0, 'Person', 50],
+  ['Passport', 'Passport renewal / reissue', 0, 'Person', 200], ['Passport', 'Police clearance certificate (PCC)', 0, 'Person', 200],
+  ['Certificates', 'Marriage certificate registration', 0, 'Booking', 100], ['Certificates', 'Integrated / nativity certificate', 0, 'Person', 50],
+  ['Certificates', 'Local status / domicile certificate', 0, 'Person', 50],
+  ['Land & Property', 'Land records copy (Adangal / 1-B)', 0, 'Booking', 30], ['Land & Property', 'Encumbrance certificate (EC)', 0, 'Booking', 50],
+  ['Land & Property', 'Property registration slot / challan', 0, 'Booking', 200], ['Land & Property', 'Mutation application', 0, 'Booking', 100],
+  ['Land & Property', 'Property tax payment', 0, 'Booking', 20], ['Land & Property', 'Water tax payment', 0, 'Booking', 20],
+  ['Land & Property', 'Building permission application (online)', 0, 'Booking', 200],
+  ['Ration & Pension', 'Rice card status / eKYC', 0, 'Booking', 20], ['Ration & Pension', 'Pension status / eKYC', 0, 'Person', 20],
+  ['Govt Schemes', 'State welfare scheme application / status', 0, 'Person', 50], ['Govt Schemes', 'Housing scheme application', 0, 'Person', 100],
+  ['Govt Schemes', 'Central scheme application (PMAY / PM Vishwakarma / PM SVANidhi)', 0, 'Person', 100],
+  ['Farmers', 'Crop insurance (PMFBY) application', 0, 'Person', 50], ['Farmers', 'Farmer registration / e-crop help', 0, 'Person', 50],
+  ['Farmers', 'Kisan credit card application', 0, 'Person', 100], ['Farmers', 'Farm subsidy application', 0, 'Person', 50],
+  ['Education', 'College / school admission online application', 0, 'Person', 100], ['Education', 'Counselling registration (EAPCET, ICET, etc.)', 0, 'Person', 150],
+  ['Education', 'Online fee payment (school / college / exam)', 0, 'Booking', 20], ['Education', 'Marks memo / certificate download (DigiLocker)', 0, 'Person', 20],
+  ['Education', 'APAAR / ABC ID creation', 0, 'Person', 30],
+  ['Exams & Jobs', 'Govt job application (APPSC / TSPSC / SSC / UPSC / RRB / IBPS / Police)', 0, 'Person', 100], ['Exams & Jobs', 'Exam fee payment', 0, 'Booking', 20],
+  ['Exams & Jobs', 'Resume / bio-data typing', 0, 'Person', 100], ['Exams & Jobs', 'Employment exchange registration', 0, 'Person', 50],
+  ['PF & Employment', 'UAN activation / KYC update', 0, 'Person', 50], ['PF & Employment', 'PF withdrawal / claim', 0, 'Person', 150],
+  ['PF & Employment', 'PF transfer', 0, 'Person', 100], ['PF & Employment', 'ESIC card / e-Pehchan', 0, 'Person', 50],
+  ['PF & Employment', 'Building / construction worker card', 0, 'Person', 100],
+  ['Transport (RTO)', 'Vehicle tax / permit payment', 0, 'Booking', 50], ['Transport (RTO)', 'E-challan payment', 0, 'Booking', 20],
+  ['Transport (RTO)', 'Hypothecation add / remove', 0, 'Booking', 150], ['Transport (RTO)', 'Duplicate licence / LLR', 0, 'Person', 100],
+  ['Tax & Business', 'TAN application', 0, 'Booking', 200], ['Tax & Business', 'Trade licence', 0, 'Booking', 200],
+  ['Tax & Business', 'Shop & establishment registration', 0, 'Booking', 200], ['Tax & Business', 'Professional tax registration / payment', 0, 'Booking', 100],
+  ['Tax & Business', 'Import Export Code (IEC)', 0, 'Booking', 300],
+  ['Insurance', 'Term life insurance', 0, 'Booking', 100], ['Insurance', 'Insurance renewal / claim help', 0, 'Booking', 100],
+  ['Banking', 'Mini statement / balance enquiry (AEPS)', 0, 'Booking', 0], ['Banking', 'Jan Dhan (PMJDY) account', 0, 'Person', 50],
+  ['Banking', 'Loan application help (Mudra / personal)', 0, 'Booking', 200],
+  ['Bill Payments', 'Water bill', 0, 'Booking', 10], ['Bill Payments', 'Broadband / landline bill', 0, 'Booking', 10],
+  ['Bill Payments', 'Credit card bill', 0, 'Booking', 10], ['Bill Payments', 'Loan EMI payment', 0, 'Booking', 10],
+  ['Counter', 'Scanning (per page)', 5, 'Person', 0], ['Counter', 'Colour print (per page)', 10, 'Person', 0], ['Counter', 'DTP / typing (per page)', 30, 'Person', 0],
+  ['Counter', 'Email / online account creation', 0, 'Booking', 50], ['Counter', 'Online form filling (general)', 0, 'Booking', 50], ['Counter', 'Spiral binding', 30, 'Booking', 0],
+  ['Health', 'ABHA health ID card', 0, 'Person', 30], ['Health', 'Hospital OP appointment (online)', 0, 'Person', 30],
+  ['Health', 'Medical reimbursement application', 0, 'Person', 100]
+);
+DEFAULT_DOCS['Encumbrance certificate (EC)'] = ['Property document no / survey no, Village, Owner name', 3];
+DEFAULT_DOCS['Mutation application'] = ['Sale deed copy, Aadhaar card, Land passbook / old record', 30];
+DEFAULT_DOCS['Passport renewal / reissue'] = ['Old passport, Aadhaar card, Address proof', 30];
+DEFAULT_DOCS['Police clearance certificate (PCC)'] = ['Passport, Aadhaar card, Address proof', 15];
+DEFAULT_DOCS['Marriage certificate registration'] = ['Marriage photo, Wedding card, Aadhaar of both, Witness IDs, Age proof', 15];
+DEFAULT_DOCS['PF withdrawal / claim'] = ['UAN, Aadhaar linked mobile, Bank passbook / cancelled cheque', 20];
+DEFAULT_DOCS['Crop insurance (PMFBY) application'] = ['Aadhaar card, Land passbook, Bank passbook, Sowing details', 15];
+DEFAULT_DOCS['Kisan credit card application'] = ['Aadhaar card, Land passbook, Bank passbook, Photo', 30];
+DEFAULT_DOCS['College / school admission online application'] = ['Aadhaar card, Marks memo, TC / study certificate, Caste & income certificate, Photo', 7];
+DEFAULT_DOCS['Housing scheme application'] = ['Aadhaar card, Rice card, Income certificate, Land / site details, Photo', 30];
 var DEFAULT_SERVICES = [
   ['Darshan', 'Special Entry Darshan (₹300)', 300, 'Person', 6, 100, 'Online Quota', 24, '10:00', 'As printed on ticket'],
   ['Darshan', 'SRIVANI Trust Darshan', 10500, 'Person', 1, 200, 'Online Quota', 23, '11:00', 'As printed on ticket'],
@@ -600,6 +687,17 @@ function seed_() {
     if (dd && !r.documents && !r.daysToComplete) writeFields_('Services', i + 2, { documents: dd[0], daysToComplete: dd[1] });
   });
   props.setProperty('SEEDED_DEPTS', LISTS.departments.join('|'));
+  if (props.getProperty('SEEDED_V4') !== '1') {
+    var haveNames = readAll_('Services').map(function (x) { return String(x.name).toLowerCase(); });
+    var nextS4 = nextSeq_(readColumn_('Services', 'serviceId'), 'S');
+    appendRows_('Services', DEFAULT_AGS_SERVICES.filter(function (r) { return haveNames.indexOf(r[1].toLowerCase()) < 0; }).map(function (r) {
+      var dd = DEFAULT_DOCS[r[1]];
+      return { serviceId: 'S' + pad_(nextS4++, 3), department: r[0], category: r[0], name: r[1], price: r[2], per: r[3], maxPersons: r[3] === 'Person' ? 10 : 1,
+        serviceCharge: r[4], mode: deptInfo_(r[0]).kind === 'quick' ? 'Counter' : 'Online', active: 'Yes', notes: 'Starter entry: set your fee and charge',
+        documents: dd ? dd[0] : '', daysToComplete: dd ? dd[1] : '' };
+    }));
+    props.setProperty('SEEDED_V4', '1');
+  }
   if (!readAll_('Users').length) appendRows_('Users', [{ name: 'Admin', role: 'Admin', pinHash: hashPin_('1234'), active: 'Yes' }]);
   if (!readAll_('Releases').length) { addReleasesForMonth_(monthKey_(now)); addReleasesForMonth_(monthKey_(addMonths_(now, 1))); }
 }
@@ -651,13 +749,16 @@ function api(token, action, payload) {
     if (!user) return { ok: false, error: 'SESSION', message: 'Please log in again.' };
     var fn = ACTIONS[action];
     if (!fn) return { ok: false, error: 'Unknown action ' + action };
-    if (ADMIN_ONLY.indexOf(action) >= 0 && user.role !== 'Admin') return { ok: false, error: 'Only an Admin can do this.' };
+    if (user.role === 'Viewer' && READ_ONLY.indexOf(action) < 0) return { ok: false, error: 'Your login can only view. Ask the Admin to change your role.' };
+    if (ADMIN_ONLY.indexOf(action) >= 0 && user.role !== 'Admin' && !(user.role === 'Manager' && MANAGER_OK.indexOf(action) >= 0)) return { ok: false, error: 'Only an Admin can do this.' };
     return { ok: true, data: fn(payload || {}, user) };
   } catch (err) {
     return { ok: false, error: String(err && err.message || err) };
   }
 }
 
+var READ_ONLY = ['bootstrap', 'activity', 'changePin'];
+var MANAGER_OK = ['deleteBooking', 'deleteCustomer', 'deleteService', 'runReminders'];
 var ADMIN_ONLY = ['deleteBooking', 'deleteCustomer', 'saveUser', 'deleteUser', 'saveSettings', 'newApiKey', 'deleteService', 'testSms', 'runReminders'];
 
 var ACTIONS = {
@@ -782,7 +883,7 @@ function bootstrap_(user) {
     defaultPin: me.pinHash === hashPin_('1234'),
     settings: settings_(user.role === 'Admin'),
     bookings: readAll_('Bookings').map(clean_),
-    customers: readAll_('Customers').map(clean_),
+    customers: readAll_('Customers').map(clean_).map(function (c) { return maskCustomer_(c, user); }),
     services: readAll_('Services').map(clean_),
     releases: readAll_('Releases').map(clean_),
     logins: readAll_('TTD Logins').map(clean_),
@@ -940,6 +1041,11 @@ function diffText_(a, b) {
 }
 
 // ------------------------------------------------------------------ customers
+function canSeeIds_(user) { return user && (user.role === 'Admin' || user.role === 'Manager'); }
+function maskCustomer_(c, user) {
+  if (canSeeIds_(user) || !c.idNumber) return c;
+  var d = String(c.idNumber).replace(/\s/g, ''); c.idNumber = '•••• ' + d.slice(-4); return c;
+}
 function saveCustomer_(p, user) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
@@ -948,8 +1054,10 @@ function saveCustomer_(p, user) {
     if (!String(p.name || '').trim()) throw new Error('Devotee name is required');
     p.mobile = digits_(p.mobile).slice(-10);
     p.pincode = digits_(p.pincode);
-    p.idNumber = String(p.idNumber || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
-    if (p.idType === 'Aadhaar Card' && p.idNumber.length === 12) p.idNumber = p.idNumber.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3');
+    var masked = /•/.test(String(p.idNumber || ''));
+    if (masked) delete p.idNumber; else p.idNumber = String(p.idNumber || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    if ((p.consentWhatsapp === 'Yes' || p.consentSms === 'Yes' || p.consentCalls === 'Yes') && !p.consentDate) p.consentDate = new Date();
+    if (!masked && p.idType === 'Aadhaar Card' && p.idNumber.length === 12) p.idNumber = p.idNumber.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3');
     var ex = p.customerId ? findRow_('Customers', 'customerId', p.customerId) : null;
     if (!ex) {
       p.customerId = 'C' + pad_(nextSeq_(readColumn_('Customers', 'customerId'), 'C'), 5);
@@ -958,7 +1066,7 @@ function saveCustomer_(p, user) {
     p.updatedOn = now;
     upsert_('Customers', 'customerId', p);
     log_(user, p.customerId, ex ? 'Customer edited' : 'Customer added', p.name + (p.profile ? ' (' + p.profile + ')' : ''));
-    return clean_(findRow_('Customers', 'customerId', p.customerId).obj);
+    return maskCustomer_(clean_(findRow_('Customers', 'customerId', p.customerId).obj), user);
   } finally {
     lock.releaseLock();
   }
@@ -1097,6 +1205,14 @@ function pendingCustomerIds_() {
 // ------------------------------------------------------------------ messages (same logic as the dashboard)
 function pickTemplate_(b) {
   var kind = deptInfo_(b.department || 'TTD').kind;
+  if (kind === 'booking') {
+    switch (b.status) {
+      case 'Booked': case 'Completed': return 'booking_done';
+      case 'Not Booked': case 'Payment Failed': return 'booking_failed';
+      case 'Cancelled': return 'cancelled';
+      default: return 'booking_received';
+    }
+  }
   if (kind === 'travel') {
     switch (b.status) {
       case 'Booked': case 'Completed': return 'travel_booked';
@@ -1264,7 +1380,7 @@ function runReminders_(user, dryRun) {
   var sent = [], failed = [];
   due.slice(0, 100).forEach(function (b, i) {
     try {
-      var r = sendSms_(b.mobile, buildMessage_(clean_(b), lang, 'sms', deptInfo_(b.department).kind === 'travel' ? 'travel_reminder' : 'reminder').text);
+      var r = sendSms_(b.mobile, buildMessage_(clean_(b), lang, 'sms', deptInfo_(b.department).kind === 'travel' ? 'travel_reminder' : deptInfo_(b.department).kind === 'booking' ? 'booking_reminder' : 'reminder').text);
       saveBooking_({ bookingId: b.bookingId, reminderSentOn: new Date() }, user, 'Reminder SMS sent (' + r.parts + ' SMS)');
       sent.push(list[i]);
     } catch (e) {

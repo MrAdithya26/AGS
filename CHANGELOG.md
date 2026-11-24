@@ -2,6 +2,14 @@
 
 Every AGS change, newest first. Each entry says: what changed, the version, and the chat it came from (see `11_Chat-Records/`).
 
+## 24 Nov 2026 – Sheet edition 4.0.0, Step 1 of 4 (services, customers, roles)
+
+- **All online services:** 26 departments, about 156 online / CSC services plus TTD (new: Temples, Hotels & Stays, Land & Property, Farmers, Education, PF & Employment, Health; more in Train, Bus, Passport, Certificates, RTO, Tax, Banking, Bill Payments, Counter). No home / third-party services (delivery, plumber, electrician). Existing sheets get the new services once, automatically; nothing you deleted comes back twice.
+- **New "booking" type** for Temples and Hotels & Stays: Booked / Not booked buttons, its own Telugu + English WhatsApp and SMS messages, reminder, receipt labels.
+- **Customer 360:** name in Telugu, message language, WhatsApp / SMS / call consent (date saved), tags, Drive documents-folder link; profile shows total billed, paid and balance due.
+- **Staff roles:** Admin, Manager (can delete and run reminders; cannot change users, settings or API key), Staff, Viewer (view only). Only Admin / Manager receive full ID numbers; others see the last 4 digits.
+- Old 3.0.0 code kept in `99_Archive/12_Services-Master-Sheet/v3.0.0/`. Next: Step 2 (money: receipt numbers, cash closing, portal wallets).
+
 ## 24 Nov 2026 – Focus decision
 
 - Pro CRM 0.6.1 **on hold** (`04_Platform-Nextjs-Supabase/crm/ON-HOLD.md`); everything stays in GitHub, Drive and Supabase.

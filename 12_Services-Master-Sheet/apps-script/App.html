@@ -218,7 +218,7 @@ function render() {
   S.charts.forEach(c => c.destroy());
   S.charts = [];
   const el = $('#content');
-  el.innerHTML = PAGES[S.page]();
+  el.innerHTML = (S.user && S.user.role === 'Viewer' ? '<div class="card" style="padding:10px;margin-bottom:12px">👁 View-only login: you can see everything, but saving is switched off. Ask the Admin to change your role.</div>' : '') + PAGES[S.page]();
   declutter(el);
   if (AFTER[S.page]) AFTER[S.page]();
   window.scrollTo(0, 0);
@@ -272,8 +272,10 @@ function stats(list) {
 }
 
 // ================================================================ messages (same rules as the server)
+const canManage = () => S.user && (S.user.role === 'Admin' || S.user.role === 'Manager');
 function pickTemplate(b) {
   const kind = DI(b).kind;
+  if (kind === 'booking') return BOOKED.includes(b.status) ? 'booking_done' : b.status === 'Not Booked' || b.status === 'Payment Failed' ? 'booking_failed' : b.status === 'Cancelled' ? 'cancelled' : 'booking_received';
   if (kind === 'travel') return BOOKED.includes(b.status) ? 'travel_booked' : b.status === 'Not Booked' || b.status === 'Payment Failed' ? 'travel_not_booked' : b.status === 'Cancelled' ? 'travel_cancelled' : 'travel_received';
   if (kind === 'app' || kind === 'quick') {
     const appKeys = { 'Applied': 'app_applied', 'In Process': 'app_in_process', 'Ready to Collect': 'app_ready', 'Rejected': 'app_rejected' };
@@ -581,7 +583,7 @@ function openBooking(id, opts) {
         ${b.mobile ? `<a style="color:#fff" href="tel:${esc(b.mobile)}">📞 ${esc(b.mobile)}</a><a style="color:#fff" target="_blank" href="${waUrl(b.mobile, '')}">🟢 WhatsApp</a>` : ''}
       </div>
       <div class="actions">
-        ${DI(b).kind === 'ttd' || DI(b).kind === 'travel' ? `<button class="btn green sm" data-act="markBooked" data-id="${esc(id)}">✅ Booked</button>
+        ${['ttd', 'travel', 'booking'].includes(DI(b).kind) ? `<button class="btn green sm" data-act="markBooked" data-id="${esc(id)}">✅ Booked</button>
         <button class="btn red sm" data-act="markNotBooked" data-id="${esc(id)}">❌ Not booked</button>
         ${DI(b).kind === 'ttd' ? `<button class="btn sm" data-act="markDip" data-id="${esc(id)}">🎲 Lucky dip</button>` : ''}
         <button class="btn sm" data-act="markAttempt" data-id="${esc(id)}">▶ Attempting</button>
@@ -636,10 +638,10 @@ function openBooking(id, opts) {
     <div class="dSec ${DI(b).kind === 'quick' ? 'hide' : ''}"><h4>${DI(b).kind === 'ttd' ? 'Devotees' : DI(b).kind === 'travel' ? 'Passengers' : 'Persons'} (${num(b.persons)})</h4>
       ${(b.customerIds ? String(b.customerIds).split(/[,\s]+/).filter(Boolean) : []).map(cid => { const c = S.db.customers.find(x => x.customerId === cid); return c ? `<div class="pick" style="margin-bottom:6px" data-act="openCustomer" data-id="${esc(cid)}"><div class="avatar">${initials(c.name)}</div><div class="grow"><b>${esc(c.name)}</b><div class="muted small">${esc(c.gender)} · ${ageOf(c.dob) || '?'} yrs · ${esc(c.idType)} ${maskId(c.idNumber)}${c.gotram ? ' · Gotram ' + esc(c.gotram) : ''}</div></div></div>` : ''; }).join('') || `<div>${esc(b.devotees) || '<span class="muted">—</span>'}</div>`}
     </div>
-    <div class="dSec ${DI(b).kind === 'ttd' ? '' : 'hide'}"><h4>🎫 TTD booking result</h4><div class="kv">
-      ${kv('TTD booking / ticket no', b.ttdRef ? `<b>${esc(b.ttdRef)}</b>` : '')}${kv(isRoom ? 'Check-in' : 'Darshan / seva date', fD(isRoom ? b.checkIn : b.serviceDate))}
+    <div class="dSec ${DI(b).kind === 'ttd' || DI(b).kind === 'booking' ? '' : 'hide'}"><h4>🎫 ${DI(b).kind === 'ttd' ? 'TTD booking' : 'Booking'} result</h4><div class="kv">
+      ${kv(DI(b).kind === 'ttd' ? 'TTD booking / ticket no' : 'Booking / ticket no', b.ttdRef ? `<b>${esc(b.ttdRef)}</b>` : '')}${kv(isRoom ? 'Check-in' : 'Darshan / seva date', fD(isRoom ? b.checkIn : b.serviceDate))}
       ${isRoom ? kv('Check-out', fD(b.checkOut)) + kv('Room / cottage', esc(b.room)) : kv('Slot / time', esc(b.slot)) + kv('Reporting point', esc(b.reportingPoint))}
-      ${kv('TTD payment', esc(b.ttdPayment))}${kv('Ticket link', b.ticketLink ? `<a href="${esc(b.ticketLink)}" target="_blank">Open ticket</a>` : '')}
+      ${DI(b).kind === 'ttd' ? kv('TTD payment', esc(b.ttdPayment)) : ''}${kv('Ticket link', b.ticketLink ? `<a href="${esc(b.ticketLink)}" target="_blank">Open ticket</a>` : '')}
     </div></div>
     <div class="dSec"><h4>💰 Payment &amp; refund</h4><div class="kv">
       ${kv('Ticket amount', inr(b.ticketAmount))}${kv('Service charge', inr(b.serviceCharge))}
@@ -685,10 +687,10 @@ function markBooked(id) {
     ${fld('Boarding point', inp('boardingPoint', b.boardingPoint))}${fld('Ticket fare (₹)', inp('ticketAmount', b.ticketAmount, 'type="number" min="0"'))}
     ${fld('Ticket PDF / link', inp('ticketLink', b.ticketLink, 'placeholder="Google Drive link (optional)"'), 'spanAll')}
   </form>` : `<form class="grid g2" id="fBooked">
-    ${fld('TTD booking / ticket no', inp('ttdRef', b.ttdRef, 'required placeholder="e.g. SED1234567890"'), 'req')}
-    ${fld('TTD login used', `<select class="i" name="ttdLogin">${loginOptions(b.ttdLogin)}</select>`)}
+    ${DI(b).kind === 'ttd' ? fld('TTD booking / ticket no', inp('ttdRef', b.ttdRef, 'required placeholder="e.g. SED1234567890"'), 'req') + fld('TTD login used', `<select class="i" name="ttdLogin">${loginOptions(b.ttdLogin)}</select>`)
+      : fld('Booking / ticket no', inp('ttdRef', b.ttdRef, 'required'), 'req')}
     ${isRoom ? fld('Check-in', inp('checkIn', b.checkIn || b.preferredDate, 'type="date" required'), 'req') + fld('Check-out', inp('checkOut', b.checkOut, 'type="date"')) + fld('Room / cottage', inp('room', b.room))
-      : fld('Darshan / seva date', inp('serviceDate', b.serviceDate || b.preferredDate, 'type="date" required'), 'req') + fld('Slot / reporting time', inp('slot', b.slot, 'placeholder="e.g. 10:00 AM - 11:00 AM"'))}
+      : fld(DI(b).kind === 'ttd' ? 'Darshan / seva date' : 'Date (darshan / check-in)', inp('serviceDate', b.serviceDate || b.preferredDate, 'type="date" required'), 'req') + fld('Slot / reporting time', inp('slot', b.slot, 'placeholder="e.g. 10:00 AM - 11:00 AM"'))}
     ${fld('Reporting point', inp('reportingPoint', b.reportingPoint || svc.reportingPoint || ''))}
     ${fld('Ticket amount (₹)', inp('ticketAmount', b.ticketAmount, 'type="number" min="0"'))}
     ${fld('Ticket PDF / link', inp('ticketLink', b.ticketLink, 'placeholder="Google Drive link (optional)"'))}
@@ -791,7 +793,7 @@ function moreStatus(id) {
   const b = S.db.bookings.find(x => x.bookingId === id);
   const m = modal({ title: '⋯ Change status', size: 'sm', body: `<div class="grid">
     ${S.db.lists.statuses.map(s => `<button class="btn" style="justify-content:flex-start" data-s="${esc(s)}">${badge(s)} ${s === b.status ? '<span class="muted small">(current)</span>' : ''}</button>`).join('')}
-    ${S.user.role === 'Admin' ? '<hr style="border:0;border-top:1px solid var(--line);width:100%"><button class="btn red" data-del>🗑 Delete booking</button>' : ''}</div>`, noFocus: true });
+    ${canManage() ? '<hr style="border:0;border-top:1px solid var(--line);width:100%"><button class="btn red" data-del>🗑 Delete booking</button>' : ''}</div>`, noFocus: true });
   $$('[data-s]', m.el).forEach(btn => btn.onclick = async () => {
     const s = btn.dataset.s;
     m.close();
@@ -880,7 +882,7 @@ function bookingForm(id, preset) {
     $$('.dk', f).forEach(el => el.classList.toggle('hide', !el.classList.contains('dk-' + kind)));
     $('#bkWho', m.el).textContent = kind === 'ttd' ? '👨‍👩‍👧 Devotees' : kind === 'travel' ? '👨‍👩‍👧 Passengers' : '👤 Customer / family';
     $('#lblPeople', m.el).textContent = kind === 'ttd' ? 'Devotees' : kind === 'travel' ? 'Passengers' : 'Persons (names)';
-    $('#lblFee', m.el).textContent = kind === 'ttd' || kind === 'travel' ? 'Ticket amount (₹)' : 'Govt / portal fee (₹)';
+    $('#lblFee', m.el).textContent = kind === 'ttd' || kind === 'travel' || kind === 'booking' ? 'Ticket amount (₹)' : 'Govt / portal fee (₹)';
     if (refill) f.service.innerHTML = opt(svcOpts(f.category.value), refill === 'keep' ? b.service : '', '— choose —');
     showDocs();
     const tv = TRAVEL[f.department.value];
@@ -1029,22 +1031,30 @@ PAGES.customers = () => {
   const shown = P.filter(p => !q || p.name.toLowerCase().includes(q) || p.members.some(c => [c.name, c.mobile, c.idNumber, c.city].some(v => String(v || '').toLowerCase().replace(/\s/g, '').includes(q.replace(/\s/g, '')))));
   if (!S.prof || !P.some(p => p.name === S.prof)) S.prof = shown[0] ? shown[0].name : null;
   const prof = P.find(p => p.name === S.prof);
-  let right = '<div class="card empty"><div class="big">👨‍👩‍👧</div>No customers yet. Add a devotee or import your Excel template.</div>';
+  let right = '<div class="card empty"><div class="big">👨‍👩‍👧</div>No customers yet. Add a customer or import your Excel template.</div>';
   if (prof) {
     const c0 = prof.contact;
     const ids = new Set(prof.members.map(c => c.customerId));
     const hist = S.db.bookings.filter(b => b.profile === prof.name || String(b.customerIds || '').split(/[,\s]+/).some(x => ids.has(x)) || (c0.mobile && b.mobile === c0.mobile)).sort((a, b) => String(b.requestDate).localeCompare(a.requestDate));
     const hs = stats(hist);
+    const billed = hist.reduce((a, b) => a + num(b.total), 0), paidAll = hist.reduce((a, b) => a + num(b.received), 0);
+    const tags = [...new Set(prof.members.flatMap(c => String(c.tags || '').split(',').map(t => t.trim()).filter(Boolean)))];
+    const yn = v => v === 'No' ? '❌' : '✅';
     right = `<div class="card">
-      <div class="row wrap between"><div class="row"><div class="avatar" style="width:46px;height:46px;font-size:16px">${initials(prof.name)}</div><div><h3 style="margin:0">${esc(prof.name)}</h3><div class="muted small">${prof.members.length} devotee(s) · ${esc(c0.city || '')}${c0.district ? ', ' + esc(c0.district) : ''}</div></div></div>
-      <div class="row wrap"><button class="btn primary sm" data-act="newBookingFor" data-p="${esc(prof.name)}">🎫 New booking</button><button class="btn sm" data-act="addMember" data-p="${esc(prof.name)}">＋ Add devotee</button>${c0.mobile ? `<a class="btn sm wa" target="_blank" href="${waUrl(c0.mobile, '')}">WhatsApp</a>` : ''}</div></div>
+      <div class="row wrap between"><div class="row"><div class="avatar" style="width:46px;height:46px;font-size:16px">${initials(prof.name)}</div><div><h3 style="margin:0">${esc(prof.name)}</h3><div class="muted small">${prof.members.map(c => c.nameTe).filter(Boolean).slice(0, 1).map(t => esc(t) + ' · ').join('')}${prof.members.length} person(s) · ${esc(c0.city || '')}${c0.district ? ', ' + esc(c0.district) : ''}</div></div></div>
+      <div class="row wrap"><button class="btn primary sm" data-act="newBookingFor" data-p="${esc(prof.name)}">🎫 New booking</button><button class="btn sm" data-act="addMember" data-p="${esc(prof.name)}">＋ Add member</button>${c0.mobile ? `<a class="btn sm wa" target="_blank" href="${waUrl(c0.mobile, '')}">WhatsApp</a>` : ''}</div></div>
       <div class="kv" style="margin-top:14px">
         <div><small>Mobile</small><span>${esc(c0.mobile) || '—'}</span></div><div><small>Email</small><span>${esc(c0.email) || '—'}</span></div>
         <div style="grid-column:1/-1"><small>Address</small><span>${esc([c0.address, c0.city, c0.district, c0.state, c0.pincode].filter(Boolean).join(', ')) || '—'}</span></div>
+        <div><small>Messages in</small><span>${esc(prof.members[0].language || 'Telugu')}</span></div>
+        <div><small>Consent</small><span>WhatsApp ${yn(prof.members[0].consentWhatsapp)} · SMS ${yn(prof.members[0].consentSms)} · Calls ${yn(prof.members[0].consentCalls)}</span></div>
+        ${tags.length ? `<div><small>Tags</small><span>${tags.map(t => `<span class="badge">${esc(t)}</span>`).join(' ')}</span></div>` : ''}
+        ${prof.members.find(c => c.docsLink) ? `<div><small>Documents</small><span><a target="_blank" href="${esc(prof.members.find(c => c.docsLink).docsLink)}">📁 Open folder</a></span></div>` : ''}
       </div>
+      <div class="grid g3" style="margin-top:12px;gap:8px"><div class="card" style="padding:10px"><small class="muted">Total billed</small><div><b>${inr(billed)}</b></div></div><div class="card" style="padding:10px"><small class="muted">Paid</small><div><b>${inr(paidAll)}</b></div></div><div class="card" style="padding:10px"><small class="muted">Balance due</small><div><b style="color:${billed - paidAll > 0 ? 'var(--red,#c0392b)' : 'inherit'}">${inr(Math.max(0, billed - paidAll))}</b></div></div></div>
       <div class="row wrap small" style="margin-top:12px;gap:16px"><span>🎫 ${hist.length} bookings</span><span>✅ ${hs.booked}</span><span>❌ ${hs.failed}</span><span>⏳ ${hs.pending}</span><span>💰 ${inr(hs.received)}</span></div>
     </div>
-    <div class="card" style="margin-top:14px"><h3>Devotees <span class="act"><label class="small muted"><input type="checkbox" data-act="toggleIds" ${S.showIds ? 'checked' : ''}> Show ID numbers</label></span></h3>
+    <div class="card" style="margin-top:14px"><h3>Family members <span class="act"><label class="small muted"><input type="checkbox" data-act="toggleIds" ${S.showIds ? 'checked' : ''}> Show ID numbers</label></span></h3>
       <div class="tableWrap"><table class="t"><thead><tr><th>Name</th><th>Age</th><th>Gender</th><th>Photo ID</th><th class="hideM">Gotram</th><th class="hideM">ID</th><th></th></tr></thead><tbody>
       ${prof.members.map(c => `<tr class="click" data-act="openCustomer" data-id="${esc(c.customerId)}"><td><b>${esc(c.name)}</b><div class="muted small">${esc(c.dob)}</div></td><td>${ageOf(c.dob)}</td><td>${esc(c.gender)}</td><td>${esc(c.idType)}<div class="small">${esc(S.showIds ? c.idNumber : maskId(c.idNumber))}</div></td><td class="hideM">${esc(c.gotram) || '—'}</td><td class="hideM muted small">${esc(c.customerId)}</td><td class="right"><button class="iconBtn" data-act="editCustomer" data-id="${esc(c.customerId)}" title="Edit">✏️</button></td></tr>`).join('')}
       </tbody></table></div></div>
@@ -1054,11 +1064,11 @@ PAGES.customers = () => {
   }
   return `
   <div class="toolbar">
-    <button class="btn primary" data-act="addMember" data-p="">＋ Add devotee</button>
+    <button class="btn primary" data-act="addMember" data-p="">＋ Add customer</button>
     <button class="btn" data-act="importCustomers">📥 Import Excel template</button>
     <button class="btn" data-act="exportExt">⬇ Export for extension</button>
     <button class="btn ghost" data-act="downloadTemplate">📄 Blank template</button>
-    <span class="muted small" style="margin-left:auto">${S.db.customers.length} devotees · ${P.length} families</span>
+    <span class="muted small" style="margin-left:auto">${S.db.customers.length} customers · ${P.length} families</span>
   </div>
   <div class="split">
     <div class="card" style="padding:10px"><input class="i" id="custQ" placeholder="Search family, name, mobile, Aadhaar…" value="${esc(S.custQ)}" style="margin-bottom:8px">
@@ -1075,22 +1085,27 @@ function customerForm(cid, preset, after) {
   // New devotee in an existing family: copy the family's address.
   if (!cid && c.profile) { const p = profiles().find(x => x.name === c.profile); if (p) ['mobile', 'email', 'address', 'city', 'district', 'state', 'pincode', 'country'].forEach(k => { if (!c[k] || k === 'state' || k === 'country') c[k] = p.contact[k] || c[k]; }); }
   const L = S.db.lists;
-  const m = modal({ title: cid ? '✏️ Edit devotee' : '＋ Add devotee', body: `<form id="fCust" class="grid g3" autocomplete="off">
+  const m = modal({ title: cid ? '✏️ Edit customer' : '＋ Add customer', body: `<form id="fCust" class="grid g3" autocomplete="off">
     ${fld('Profile / family name', inp('profile', c.profile, 'list="profList" placeholder="e.g. Ramesh Family"'))}
     <datalist id="profList">${profiles().map(p => `<option value="${esc(p.name)}">`).join('')}</datalist>
-    ${fld('Devotee name (as on ID)', inp('name', c.name, 'required'), 'req span2')}
+    ${fld('Name (as on ID)', inp('name', c.name, 'required'), 'req span2')}
+    ${fld('పేరు తెలుగులో (Name in Telugu)', inp('nameTe', c.nameTe))}
     ${fld('Date of birth (DD/MM/YYYY)', inp('dob', c.dob, 'placeholder="14/05/1990" pattern="\\d{1,2}/\\d{1,2}/\\d{4}"'))}
     ${fld('Gender', sel('gender', L.genders, c.gender, '—'))}
     ${fld('Gotram (for Homam)', inp('gotram', c.gotram))}
     ${fld('Photo ID type', sel('idType', L.idTypes, c.idType))}
-    ${fld('Photo ID number', inp('idNumber', c.idNumber), 'span2')}
+    ${fld('Photo ID number', inp('idNumber', c.idNumber, canManage() ? '' : 'placeholder="Only Admin / Manager see full numbers"'), 'span2')}
     <div class="spanAll muted small" style="margin-top:4px">Family address &amp; contact (same for the whole family)</div>
     ${fld('Mobile', inp('mobile', c.mobile, 'inputmode="numeric"'))}
     ${fld('Email ID', inp('email', c.email, 'type="email"'), 'span2')}
     ${fld('Address', inp('address', c.address), 'spanAll')}
     ${fld('City / Town', inp('city', c.city))}${fld('District', inp('district', c.district))}${fld('State', sel('state', L.states, c.state))}
     ${fld('Pincode', inp('pincode', c.pincode, 'inputmode="numeric"'))}${fld('Country', inp('country', c.country))}${fld('Notes', inp('notes', c.notes))}
-  </form>`, foot: `${cid && S.user.role === 'Admin' ? '<button class="btn red" data-del style="margin-right:auto">🗑 Delete</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save devotee</button>` });
+    <div class="spanAll muted small" style="margin-top:4px">Messages &amp; consent (ask the customer before sending WhatsApp / SMS / calls)</div>
+    ${fld('Messages in', sel('language', L.languages || ['Telugu', 'English'], c.language || 'Telugu'))}${fld('WhatsApp OK', sel('consentWhatsapp', L.yesNo, c.consentWhatsapp || 'Yes'))}${fld('SMS OK', sel('consentSms', L.yesNo, c.consentSms || 'Yes'))}
+    ${fld('Calls OK', sel('consentCalls', L.yesNo, c.consentCalls || 'Yes'))}${fld('Tags (comma separated)', inp('tags', c.tags, 'placeholder="e.g. regular, farmer, senior"'), 'span2')}
+    ${fld('Documents folder (Google Drive link)', inp('docsLink', c.docsLink, 'placeholder="Keep ID copies in your own Drive, paste the folder link"'), 'spanAll')}
+  </form>`, foot: `${cid && canManage() ? '<button class="btn red" data-del style="margin-right:auto">🗑 Delete</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save customer</button>` });
   m.el.querySelector('[data-x2]').onclick = m.close;
   const del = m.el.querySelector('[data-del]');
   if (del) del.onclick = async () => {
@@ -1108,7 +1123,7 @@ function customerForm(cid, preset, after) {
       upsertLocal('customers', 'customerId', saved);
       pushActivity(saved.customerId, cid ? 'Customer edited' : 'Customer added', saved.name);
       m.close();
-      toast('Devotee saved', 'ok');
+      toast('Customer saved', 'ok');
       if (after) after(saved); else { S.prof = saved.profile; if (S.page === 'customers') render(); }
     } catch (e) { fail(e); }
   };
@@ -1234,7 +1249,7 @@ function editService(id) {
     ${fld('Usual release day', inp('releaseDay', s.releaseDay, 'type="number" min="1" max="31"'))}${fld('Release time', inp('releaseTime', s.releaseTime, 'placeholder="10:00"'))}${fld('Reporting point', inp('reportingPoint', s.reportingPoint))}
     ${fld('Documents needed (comma separated)', inp('documents', s.documents), 'span2')}${fld('Usual days to complete', inp('daysToComplete', s.daysToComplete, 'type="number" min="0"'))}
     ${fld('Notes', inp('notes', s.notes), 'spanAll')}</form>`,
-    foot: `${id && S.user.role === 'Admin' ? '<button class="btn red" data-del style="margin-right:auto">🗑 Delete</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>` });
+    foot: `${id && canManage() ? '<button class="btn red" data-del style="margin-right:auto">🗑 Delete</button>' : ''}<button class="btn" data-x2>Cancel</button><button class="btn primary" data-ok>Save</button>` });
   m.el.querySelector('[data-x2]').onclick = m.close;
   const del = m.el.querySelector('[data-del]');
   if (del) del.onclick = async () => { if (!await confirmBox('Delete service <b>' + esc(s.name) + '</b>? Old bookings keep their service name.', 'Delete')) return; try { await call('deleteService', { serviceId: id }); S.db.services = S.db.services.filter(x => x.serviceId !== id); m.close(); render(); } catch (e) { fail(e); } };
@@ -1601,13 +1616,13 @@ function receiptHtml(b) {
       ${row(ttd ? 'భక్తులు' : kind === 'travel' ? 'ప్రయాణికులు' : 'వ్యక్తులు', ttd ? 'Devotees' : kind === 'travel' ? 'Passengers' : 'Persons', esc(b.devotees || '') + (num(b.persons) ? ` (${num(b.persons)})` : ''))}
       ${row('కోరిన తేదీ', 'Preferred date', b.status === 'Booked' || b.status === 'Completed' ? '' : fD(b.preferredDate))}
       ${row(ttd ? 'దర్శనం / సేవ తేదీ' : kind === 'travel' ? 'ప్రయాణ తేదీ' : 'తేదీ', ttd ? 'Date & slot' : kind === 'travel' ? 'Journey date & time' : 'Date', dateLine)}
-      ${row(ttd ? 'TTD టికెట్ నం.' : kind === 'travel' ? 'PNR / టికెట్ నం.' : 'అప్లికేషన్ నం.', ttd ? 'TTD ticket no' : kind === 'travel' ? 'PNR / ticket no' : 'Application / ref no', esc(b.ttdRef || ''))}
+      ${row(ttd ? 'TTD టికెట్ నం.' : kind === 'travel' ? 'PNR / టికెట్ నం.' : kind === 'booking' ? 'బుకింగ్ / టికెట్ నం.' : 'అప్లికేషన్ నం.', ttd ? 'TTD ticket no' : kind === 'travel' ? 'PNR / ticket no' : kind === 'booking' ? 'Booking / ticket no' : 'Application / ref no', esc(b.ttdRef || ''))}
       ${kind === 'travel' ? row('ప్రయాణం', 'Journey', route(b)) + row('రైలు / బస్సు / ఫ్లైట్', 'Train / bus / flight', esc([b.operator, b.vehicleNo].filter(Boolean).join(' '))) + row('తరగతి', 'Class / quota', esc([b.travelClass, b.quota].filter(Boolean).join(' · '))) + row('బోర్డింగ్', 'Boarding', esc(b.boardingPoint || '')) + row('సీటు', 'Coach / seat', esc(b.seatInfo || '')) + row('టికెట్ స్థితి', 'Ticket status', esc(b.ticketStatus || '')) : ''}
       ${kind === 'app' ? row('అంచనా తేదీ', 'Expected date', fD(b.expectedDate)) + row('ఇచ్చిన పత్రాలు', 'Documents received', esc(b.documents || '')) : ''}
       ${row('స్థితి', 'Status', esc(b.status))}
     </table>
     <table class="rTab money">
-      ${row(ttd ? 'టికెట్ మొత్తం (TTD)' : kind === 'travel' ? 'టికెట్ ఛార్జీ' : 'ప్రభుత్వ / పోర్టల్ రుసుము', ttd ? 'Ticket amount' : kind === 'travel' ? 'Ticket fare' : 'Govt / portal fee', inr(b.ticketAmount))}
+      ${row(ttd ? 'టికెట్ మొత్తం (TTD)' : kind === 'travel' ? 'టికెట్ ఛార్జీ' : kind === 'booking' ? 'టికెట్ / గది మొత్తం' : 'ప్రభుత్వ / పోర్టల్ రుసుము', ttd ? 'Ticket amount' : kind === 'travel' ? 'Ticket fare' : kind === 'booking' ? 'Ticket / room amount' : 'Govt / portal fee', inr(b.ticketAmount))}
       ${row('సేవా రుసుము', 'Service charge', inr(b.serviceCharge))}
       ${row('మొత్తం', 'Total', inr(total), 'tot')}
       ${row('చెల్లించినది', 'Received', inr(recv) + (b.paymentMode ? ' · ' + esc(b.paymentMode) : ''), 'paid')}

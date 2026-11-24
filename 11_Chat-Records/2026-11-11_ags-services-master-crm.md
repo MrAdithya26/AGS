@@ -27,3 +27,7 @@
 **14 Nov – Phase 1f done (CRM 0.6.0), Phase 1 complete:** dashboard with period comparison and work queue, reports + CSV export, Sheet-edition import (customers, bookings with payments), staff guide, free hosting guide (Netlify). Found and fixed: imported booking numbers could clash with new ones (migration 0009). Database tests passed and left no data.
 
 **Next:** owner does the setup (expose `crm`, owner login, Netlify) and a first live test → 1.0.0. Then Phase 2 – WhatsApp automation (free mode first).
+
+**24 Nov – Focus back on the Sheet edition.** Owner: too many pieces; build the full CRM in Google Sheets + Apps Script first, pro CRM later. Include every online service (Adithya Internet & CSC, TTD, all online work), but no third-party home services (delivery, plumber, electrician). Plan: v4 in 4 steps.
+
+**24 Nov – v4 Step 1 done (4.0.0):** 26 departments, ~156 online services + TTD; new "booking" type for Temples and Hotels & Stays with its own messages; Customer 360 (Telugu name, consent, language, tags, documents link, billed/paid/balance); roles Admin / Manager / Staff / Viewer; full ID numbers only for Admin / Manager. Server tests passed, demo checked in a browser. **Next: Step 2 – money** (receipt numbers, receipt print, cash closing per staff, portal wallets).
